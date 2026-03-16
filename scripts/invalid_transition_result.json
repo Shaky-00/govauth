@@ -1,0 +1,268 @@
+{
+  "runs": [
+    {
+      "steps": [
+        {
+          "step": "create_policy",
+          "latency_ms": 2.308653998625232,
+          "id": "policy-1773650160836-b3a52aeb30bd"
+        },
+        {
+          "step": "admit_policy",
+          "latency_ms": 0.6491280000773259,
+          "status": "ADMISSIBLE"
+        },
+        {
+          "step": "publish_policy",
+          "latency_ms": 0.48451999828103,
+          "status": "PUBLISHED"
+        },
+        {
+          "step": "derive_plan",
+          "latency_ms": 0.47736700071254745,
+          "id": "plan-1773650160838-79baf10d246e"
+        },
+        {
+          "step": "create_session",
+          "latency_ms": 0.47979599912650883,
+          "id": "session-1773650160838-b617804dde18",
+          "state": "SESSION_BOUND"
+        },
+        {
+          "step": "evaluate_without_inputs",
+          "latency_ms": 0.7237210011226125,
+          "http_status": 400,
+          "response": {
+            "message": "request failed",
+            "error": "session state must be EVIDENCE_BOUND before evaluation"
+          }
+        },
+        {
+          "step": "admit_evidence",
+          "latency_ms": 0.7734760001767427,
+          "evidence_id": "evidence-1773650160840-999abb8021be",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "artifact_before_snapshot_and_evaluate",
+          "latency_ms": 1.2446580003597774,
+          "http_status": 400,
+          "response": {
+            "message": "request failed",
+            "error": "session state must be DECIDED before artifact sealing"
+          }
+        },
+        {
+          "step": "pin_snapshot",
+          "latency_ms": 1.1296209995634854,
+          "snapshot_id": "snapshot-1773650160842-1f3e59c506aa",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "evaluate",
+          "latency_ms": 0.654874002066208,
+          "evaluation_id": "eval-1773650160843-421f06b40bd7",
+          "decision": "ALLOW",
+          "state": "DECIDED"
+        },
+        {
+          "step": "seal_artifact",
+          "latency_ms": 0.7209059986053035,
+          "artifact_id": "artifact-1773650160844-01320772cf94",
+          "decision": "ALLOW",
+          "state": "ENFORCED"
+        },
+        {
+          "step": "get_audit_bundle",
+          "latency_ms": 0.5087079989607446,
+          "event_count": 8
+        }
+      ],
+      "total_latency_ms": 10.155428997677518,
+      "invalid_transition_checks": 2,
+      "final_decision": "ALLOW",
+      "final_session_state": "ENFORCED",
+      "artifact_id": "artifact-1773650160844-01320772cf94",
+      "policy_id": "policy-1773650160836-b3a52aeb30bd",
+      "plan_id": "plan-1773650160838-79baf10d246e",
+      "session_id": "session-1773650160838-b617804dde18",
+      "event_count": 8
+    },
+    {
+      "steps": [
+        {
+          "step": "create_policy",
+          "latency_ms": 0.4880800006503705,
+          "id": "policy-1773650160845-19ca93db0a1b"
+        },
+        {
+          "step": "admit_policy",
+          "latency_ms": 0.6115830001363065,
+          "status": "ADMISSIBLE"
+        },
+        {
+          "step": "publish_policy",
+          "latency_ms": 0.4295959988667164,
+          "status": "PUBLISHED"
+        },
+        {
+          "step": "derive_plan",
+          "latency_ms": 0.5134269995323848,
+          "id": "plan-1773650160847-95bb6509de19"
+        },
+        {
+          "step": "create_session",
+          "latency_ms": 0.5012319998058956,
+          "id": "session-1773650160848-0e528883b16e",
+          "state": "SESSION_BOUND"
+        },
+        {
+          "step": "evaluate_without_inputs",
+          "latency_ms": 0.5526040004042443,
+          "http_status": 400,
+          "response": {
+            "message": "request failed",
+            "error": "session state must be EVIDENCE_BOUND before evaluation"
+          }
+        },
+        {
+          "step": "admit_evidence",
+          "latency_ms": 0.6864599999971688,
+          "evidence_id": "evidence-1773650160849-c6aac0fbf553",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "artifact_before_snapshot_and_evaluate",
+          "latency_ms": 0.6311889992502984,
+          "http_status": 400,
+          "response": {
+            "message": "request failed",
+            "error": "session state must be DECIDED before artifact sealing"
+          }
+        },
+        {
+          "step": "pin_snapshot",
+          "latency_ms": 0.592043998040026,
+          "snapshot_id": "snapshot-1773650160850-0f28d5539dc7",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "evaluate",
+          "latency_ms": 0.7539510006608907,
+          "evaluation_id": "eval-1773650160851-0c14e297fa19",
+          "decision": "ALLOW",
+          "state": "DECIDED"
+        },
+        {
+          "step": "seal_artifact",
+          "latency_ms": 0.6331330005195923,
+          "artifact_id": "artifact-1773650160852-133c1c3c14c7",
+          "decision": "ALLOW",
+          "state": "ENFORCED"
+        },
+        {
+          "step": "get_audit_bundle",
+          "latency_ms": 0.6471810011134949,
+          "event_count": 8
+        }
+      ],
+      "total_latency_ms": 7.040479998977389,
+      "invalid_transition_checks": 2,
+      "final_decision": "ALLOW",
+      "final_session_state": "ENFORCED",
+      "artifact_id": "artifact-1773650160852-133c1c3c14c7",
+      "policy_id": "policy-1773650160845-19ca93db0a1b",
+      "plan_id": "plan-1773650160847-95bb6509de19",
+      "session_id": "session-1773650160848-0e528883b16e",
+      "event_count": 8
+    },
+    {
+      "steps": [
+        {
+          "step": "create_policy",
+          "latency_ms": 0.6264450021262746,
+          "id": "policy-1773650160853-edeb988ce790"
+        },
+        {
+          "step": "admit_policy",
+          "latency_ms": 0.5365939978219103,
+          "status": "ADMISSIBLE"
+        },
+        {
+          "step": "publish_policy",
+          "latency_ms": 0.513225000759121,
+          "status": "PUBLISHED"
+        },
+        {
+          "step": "derive_plan",
+          "latency_ms": 0.46996399760246277,
+          "id": "plan-1773650160855-2d89d1a41776"
+        },
+        {
+          "step": "create_session",
+          "latency_ms": 0.8278660025098361,
+          "id": "session-1773650160856-f3c61ebada6d",
+          "state": "SESSION_BOUND"
+        },
+        {
+          "step": "evaluate_without_inputs",
+          "latency_ms": 0.729882998712128,
+          "http_status": 400,
+          "response": {
+            "message": "request failed",
+            "error": "session state must be EVIDENCE_BOUND before evaluation"
+          }
+        },
+        {
+          "step": "admit_evidence",
+          "latency_ms": 0.8894269994925708,
+          "evidence_id": "evidence-1773650160857-68170dd357ca",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "artifact_before_snapshot_and_evaluate",
+          "latency_ms": 0.625712000328349,
+          "http_status": 400,
+          "response": {
+            "message": "request failed",
+            "error": "session state must be DECIDED before artifact sealing"
+          }
+        },
+        {
+          "step": "pin_snapshot",
+          "latency_ms": 0.8066660011536442,
+          "snapshot_id": "snapshot-1773650160859-a11b0b06bb6c",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "evaluate",
+          "latency_ms": 0.7930790015961975,
+          "evaluation_id": "eval-1773650160860-8c8934670d01",
+          "decision": "ALLOW",
+          "state": "DECIDED"
+        },
+        {
+          "step": "seal_artifact",
+          "latency_ms": 0.9188869989884552,
+          "artifact_id": "artifact-1773650160861-6bfccd0cc991",
+          "decision": "ALLOW",
+          "state": "ENFORCED"
+        },
+        {
+          "step": "get_audit_bundle",
+          "latency_ms": 1.245935996848857,
+          "event_count": 8
+        }
+      ],
+      "total_latency_ms": 8.983683997939806,
+      "invalid_transition_checks": 2,
+      "final_decision": "ALLOW",
+      "final_session_state": "ENFORCED",
+      "artifact_id": "artifact-1773650160861-6bfccd0cc991",
+      "policy_id": "policy-1773650160853-edeb988ce790",
+      "plan_id": "plan-1773650160855-2d89d1a41776",
+      "session_id": "session-1773650160856-f3c61ebada6d",
+      "event_count": 8
+    }
+  ]
+}

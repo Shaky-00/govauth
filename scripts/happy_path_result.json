@@ -1,0 +1,211 @@
+{
+  "runs": [
+    {
+      "steps": [
+        {
+          "step": "create_policy",
+          "latency_ms": 6.4681389994802885,
+          "id": "policy-1773650154490-192f159d073b"
+        },
+        {
+          "step": "admit_policy",
+          "latency_ms": 1.0866800002986565,
+          "status": "ADMISSIBLE"
+        },
+        {
+          "step": "publish_policy",
+          "latency_ms": 1.808041997719556,
+          "status": "PUBLISHED"
+        },
+        {
+          "step": "derive_plan",
+          "latency_ms": 0.8887340009096079,
+          "id": "plan-1773650154495-0116a1bb9e08"
+        },
+        {
+          "step": "create_session",
+          "latency_ms": 1.122240999393398,
+          "id": "session-1773650154496-bd7e6addb491",
+          "state": "SESSION_BOUND"
+        },
+        {
+          "step": "admit_evidence",
+          "latency_ms": 1.4940279979782645,
+          "evidence_id": "evidence-1773650154498-2e3bc76e5f13",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "pin_snapshot",
+          "latency_ms": 0.819673001387855,
+          "snapshot_id": "snapshot-1773650154498-9cfb313d2692",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "evaluate",
+          "latency_ms": 0.9877700031211134,
+          "evaluation_id": "eval-1773650154499-a961a8a567ab",
+          "decision": "ALLOW",
+          "state": "DECIDED"
+        },
+        {
+          "step": "seal_artifact",
+          "latency_ms": 0.9020129982673097,
+          "artifact_id": "artifact-1773650154500-88adda62fa2d",
+          "decision": "ALLOW",
+          "state": "ENFORCED"
+        },
+        {
+          "step": "get_audit_bundle",
+          "latency_ms": 1.014599998597987,
+          "event_count": 8
+        }
+      ],
+      "total_latency_ms": 16.591919997154037,
+      "final_decision": "ALLOW",
+      "final_session_state": "ENFORCED",
+      "artifact_id": "artifact-1773650154500-88adda62fa2d",
+      "policy_id": "policy-1773650154490-192f159d073b",
+      "plan_id": "plan-1773650154495-0116a1bb9e08",
+      "session_id": "session-1773650154496-bd7e6addb491",
+      "event_count": 8
+    },
+    {
+      "steps": [
+        {
+          "step": "create_policy",
+          "latency_ms": 1.0560449991317,
+          "id": "policy-1773650154503-7bcb433cb08b"
+        },
+        {
+          "step": "admit_policy",
+          "latency_ms": 1.0263080002914649,
+          "status": "ADMISSIBLE"
+        },
+        {
+          "step": "publish_policy",
+          "latency_ms": 0.5144620008650236,
+          "status": "PUBLISHED"
+        },
+        {
+          "step": "derive_plan",
+          "latency_ms": 0.5232869989413302,
+          "id": "plan-1773650154505-96b61def5c25"
+        },
+        {
+          "step": "create_session",
+          "latency_ms": 0.5669980018865317,
+          "id": "session-1773650154506-50b97f82e4ff",
+          "state": "SESSION_BOUND"
+        },
+        {
+          "step": "admit_evidence",
+          "latency_ms": 0.49537299855728634,
+          "evidence_id": "evidence-1773650154507-416719a216ba",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "pin_snapshot",
+          "latency_ms": 0.5087200006528292,
+          "snapshot_id": "snapshot-1773650154507-a06d5a9d64a8",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "evaluate",
+          "latency_ms": 0.5296250019455329,
+          "evaluation_id": "eval-1773650154508-d5eb781d8005",
+          "decision": "ALLOW",
+          "state": "DECIDED"
+        },
+        {
+          "step": "seal_artifact",
+          "latency_ms": 0.44678699850919656,
+          "artifact_id": "artifact-1773650154508-c926545125e9",
+          "decision": "ALLOW",
+          "state": "ENFORCED"
+        },
+        {
+          "step": "get_audit_bundle",
+          "latency_ms": 0.5223980006121565,
+          "event_count": 8
+        }
+      ],
+      "total_latency_ms": 6.190003001393052,
+      "final_decision": "ALLOW",
+      "final_session_state": "ENFORCED",
+      "artifact_id": "artifact-1773650154508-c926545125e9",
+      "policy_id": "policy-1773650154503-7bcb433cb08b",
+      "plan_id": "plan-1773650154505-96b61def5c25",
+      "session_id": "session-1773650154506-50b97f82e4ff",
+      "event_count": 8
+    },
+    {
+      "steps": [
+        {
+          "step": "create_policy",
+          "latency_ms": 0.5717459971492644,
+          "id": "policy-1773650154509-96321cc0088d"
+        },
+        {
+          "step": "admit_policy",
+          "latency_ms": 0.6382110004778951,
+          "status": "ADMISSIBLE"
+        },
+        {
+          "step": "publish_policy",
+          "latency_ms": 0.7621019976795651,
+          "status": "PUBLISHED"
+        },
+        {
+          "step": "derive_plan",
+          "latency_ms": 0.7017489988356829,
+          "id": "plan-1773650154512-867157c28b54"
+        },
+        {
+          "step": "create_session",
+          "latency_ms": 0.6581460002053063,
+          "id": "session-1773650154512-1c38a26394b8",
+          "state": "SESSION_BOUND"
+        },
+        {
+          "step": "admit_evidence",
+          "latency_ms": 0.7046110004012007,
+          "evidence_id": "evidence-1773650154513-b7ebc26f271f",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "pin_snapshot",
+          "latency_ms": 0.45594500261358917,
+          "snapshot_id": "snapshot-1773650154514-ff49067cadc2",
+          "state": "EVIDENCE_BOUND"
+        },
+        {
+          "step": "evaluate",
+          "latency_ms": 0.4999980010325089,
+          "evaluation_id": "eval-1773650154514-8962c36fca28",
+          "decision": "ALLOW",
+          "state": "DECIDED"
+        },
+        {
+          "step": "seal_artifact",
+          "latency_ms": 0.6870899997011293,
+          "artifact_id": "artifact-1773650154515-03ceee90500b",
+          "decision": "ALLOW",
+          "state": "ENFORCED"
+        },
+        {
+          "step": "get_audit_bundle",
+          "latency_ms": 0.8030329991015606,
+          "event_count": 8
+        }
+      ],
+      "total_latency_ms": 6.4826309971977025,
+      "final_decision": "ALLOW",
+      "final_session_state": "ENFORCED",
+      "artifact_id": "artifact-1773650154515-03ceee90500b",
+      "policy_id": "policy-1773650154509-96321cc0088d",
+      "plan_id": "plan-1773650154512-867157c28b54",
+      "session_id": "session-1773650154512-1c38a26394b8",
+      "event_count": 8
+    }
+  ]
+}
