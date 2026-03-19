@@ -4,207 +4,207 @@
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 6.4681389994802885,
-          "id": "policy-1773650154490-192f159d073b"
+          "latency_ms": 3.2267130009131506,
+          "id": "policy-1773913981388-ff2e9cb38323"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 1.0866800002986565,
+          "latency_ms": 0.6725179991917685,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 1.808041997719556,
+          "latency_ms": 0.9465050006838283,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.8887340009096079,
-          "id": "plan-1773650154495-0116a1bb9e08"
+          "latency_ms": 0.5866800001967931,
+          "id": "plan-1773913981391-1756fc7be6b1"
         },
         {
           "step": "create_session",
-          "latency_ms": 1.122240999393398,
-          "id": "session-1773650154496-bd7e6addb491",
+          "latency_ms": 0.6964089989196509,
+          "id": "session-1773913981391-2300cb6e8d43",
           "state": "SESSION_BOUND"
         },
         {
           "step": "admit_evidence",
-          "latency_ms": 1.4940279979782645,
-          "evidence_id": "evidence-1773650154498-2e3bc76e5f13",
+          "latency_ms": 0.5528410001716111,
+          "evidence_id": "evidence-1773913981392-c3e3188a5e0f",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "pin_snapshot",
-          "latency_ms": 0.819673001387855,
-          "snapshot_id": "snapshot-1773650154498-9cfb313d2692",
+          "latency_ms": 0.5496459998539649,
+          "snapshot_id": "snapshot-1773913981393-16667a3ea213",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "evaluate",
-          "latency_ms": 0.9877700031211134,
-          "evaluation_id": "eval-1773650154499-a961a8a567ab",
+          "latency_ms": 0.5056700010754867,
+          "evaluation_id": "eval-1773913981393-15c0e224272d",
           "decision": "ALLOW",
           "state": "DECIDED"
         },
         {
           "step": "seal_artifact",
-          "latency_ms": 0.9020129982673097,
-          "artifact_id": "artifact-1773650154500-88adda62fa2d",
+          "latency_ms": 0.5252169994491851,
+          "artifact_id": "artifact-1773913981394-887ebd433c09",
           "decision": "ALLOW",
           "state": "ENFORCED"
         },
         {
           "step": "get_audit_bundle",
-          "latency_ms": 1.014599998597987,
+          "latency_ms": 0.547601999642211,
           "event_count": 8
         }
       ],
-      "total_latency_ms": 16.591919997154037,
+      "total_latency_ms": 8.80980100009765,
       "final_decision": "ALLOW",
       "final_session_state": "ENFORCED",
-      "artifact_id": "artifact-1773650154500-88adda62fa2d",
-      "policy_id": "policy-1773650154490-192f159d073b",
-      "plan_id": "plan-1773650154495-0116a1bb9e08",
-      "session_id": "session-1773650154496-bd7e6addb491",
+      "artifact_id": "artifact-1773913981394-887ebd433c09",
+      "policy_id": "policy-1773913981388-ff2e9cb38323",
+      "plan_id": "plan-1773913981391-1756fc7be6b1",
+      "session_id": "session-1773913981391-2300cb6e8d43",
       "event_count": 8
     },
     {
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 1.0560449991317,
-          "id": "policy-1773650154503-7bcb433cb08b"
+          "latency_ms": 0.6128879995230818,
+          "id": "policy-1773913981395-e32863e25286"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 1.0263080002914649,
+          "latency_ms": 0.5880000007891795,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 0.5144620008650236,
+          "latency_ms": 0.5751150001742644,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.5232869989413302,
-          "id": "plan-1773650154505-96b61def5c25"
+          "latency_ms": 0.5857659998582676,
+          "id": "plan-1773913981397-ebf0e482a029"
         },
         {
           "step": "create_session",
-          "latency_ms": 0.5669980018865317,
-          "id": "session-1773650154506-50b97f82e4ff",
+          "latency_ms": 0.6048099985491717,
+          "id": "session-1773913981398-6df8e17d3574",
           "state": "SESSION_BOUND"
         },
         {
           "step": "admit_evidence",
-          "latency_ms": 0.49537299855728634,
-          "evidence_id": "evidence-1773650154507-416719a216ba",
+          "latency_ms": 0.5231019986240426,
+          "evidence_id": "evidence-1773913981399-d14d7f290dde",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "pin_snapshot",
-          "latency_ms": 0.5087200006528292,
-          "snapshot_id": "snapshot-1773650154507-a06d5a9d64a8",
+          "latency_ms": 0.5665640001097927,
+          "snapshot_id": "snapshot-1773913981399-71ea8f63f622",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "evaluate",
-          "latency_ms": 0.5296250019455329,
-          "evaluation_id": "eval-1773650154508-d5eb781d8005",
+          "latency_ms": 0.7281949983735103,
+          "evaluation_id": "eval-1773913981400-3f420f09682f",
           "decision": "ALLOW",
           "state": "DECIDED"
         },
         {
           "step": "seal_artifact",
-          "latency_ms": 0.44678699850919656,
-          "artifact_id": "artifact-1773650154508-c926545125e9",
+          "latency_ms": 0.7398230009130202,
+          "artifact_id": "artifact-1773913981401-a371a32e8222",
           "decision": "ALLOW",
           "state": "ENFORCED"
         },
         {
           "step": "get_audit_bundle",
-          "latency_ms": 0.5223980006121565,
+          "latency_ms": 0.7923079992906423,
           "event_count": 8
         }
       ],
-      "total_latency_ms": 6.190003001393052,
+      "total_latency_ms": 6.316570996204973,
       "final_decision": "ALLOW",
       "final_session_state": "ENFORCED",
-      "artifact_id": "artifact-1773650154508-c926545125e9",
-      "policy_id": "policy-1773650154503-7bcb433cb08b",
-      "plan_id": "plan-1773650154505-96b61def5c25",
-      "session_id": "session-1773650154506-50b97f82e4ff",
+      "artifact_id": "artifact-1773913981401-a371a32e8222",
+      "policy_id": "policy-1773913981395-e32863e25286",
+      "plan_id": "plan-1773913981397-ebf0e482a029",
+      "session_id": "session-1773913981398-6df8e17d3574",
       "event_count": 8
     },
     {
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 0.5717459971492644,
-          "id": "policy-1773650154509-96321cc0088d"
+          "latency_ms": 0.7757599996693898,
+          "id": "policy-1773913981403-e4bc900ce824"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 0.6382110004778951,
+          "latency_ms": 0.7702469993091654,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 0.7621019976795651,
+          "latency_ms": 0.7242499996209517,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.7017489988356829,
-          "id": "plan-1773650154512-867157c28b54"
+          "latency_ms": 0.5299949989421293,
+          "id": "plan-1773913981405-6f9ca2b934d1"
         },
         {
           "step": "create_session",
-          "latency_ms": 0.6581460002053063,
-          "id": "session-1773650154512-1c38a26394b8",
+          "latency_ms": 0.6326940001599723,
+          "id": "session-1773913981405-dff5b714d206",
           "state": "SESSION_BOUND"
         },
         {
           "step": "admit_evidence",
-          "latency_ms": 0.7046110004012007,
-          "evidence_id": "evidence-1773650154513-b7ebc26f271f",
+          "latency_ms": 0.5567759999394184,
+          "evidence_id": "evidence-1773913981406-181f64f1b9f5",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "pin_snapshot",
-          "latency_ms": 0.45594500261358917,
-          "snapshot_id": "snapshot-1773650154514-ff49067cadc2",
+          "latency_ms": 0.6669689992122585,
+          "snapshot_id": "snapshot-1773913981407-34ef6e5f6464",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "evaluate",
-          "latency_ms": 0.4999980010325089,
-          "evaluation_id": "eval-1773650154514-8962c36fca28",
+          "latency_ms": 0.6735250008205185,
+          "evaluation_id": "eval-1773913981408-84b6480fe659",
           "decision": "ALLOW",
           "state": "DECIDED"
         },
         {
           "step": "seal_artifact",
-          "latency_ms": 0.6870899997011293,
-          "artifact_id": "artifact-1773650154515-03ceee90500b",
+          "latency_ms": 0.904041999092442,
+          "artifact_id": "artifact-1773913981408-73acdbebed82",
           "decision": "ALLOW",
           "state": "ENFORCED"
         },
         {
           "step": "get_audit_bundle",
-          "latency_ms": 0.8030329991015606,
+          "latency_ms": 0.6549879999511177,
           "event_count": 8
         }
       ],
-      "total_latency_ms": 6.4826309971977025,
+      "total_latency_ms": 6.889245996717364,
       "final_decision": "ALLOW",
       "final_session_state": "ENFORCED",
-      "artifact_id": "artifact-1773650154515-03ceee90500b",
-      "policy_id": "policy-1773650154509-96321cc0088d",
-      "plan_id": "plan-1773650154512-867157c28b54",
-      "session_id": "session-1773650154512-1c38a26394b8",
+      "artifact_id": "artifact-1773913981408-73acdbebed82",
+      "policy_id": "policy-1773913981403-e4bc900ce824",
+      "plan_id": "plan-1773913981405-6f9ca2b934d1",
+      "session_id": "session-1773913981405-dff5b714d206",
       "event_count": 8
     }
   ]

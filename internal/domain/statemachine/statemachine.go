@@ -3,6 +3,7 @@ package statemachine
 import (
 	"fmt"
 	"govauth/internal/domain/model"
+	"strings"
 )
 
 // 检查策略是否可以从 DRAFT 进入 ADMISSIBLE
@@ -10,12 +11,52 @@ func ValidatePolicyAdmission(p *model.Policy) error {
 	if p.Status != model.PolicyStatusDraft {
 		return fmt.Errorf("policy state must be DRAFT before admission")
 	}
-	if p.Content.RequiredRole == "" ||
-		p.Content.RequiredDepartment == "" ||
-		p.Content.RequiredPurpose == "" ||
-		p.Content.RequiredResourceStatus == "" {
-		return fmt.Errorf("policy content is incomplete: require_role/department/purpose/resourcestatus")
+
+	// 模式1：兼容旧字段模式
+	// if p.Content.RequiredRole != "" &&
+	// 	p.Content.RequiredDepartment != "" &&
+	// 	p.Content.RequiredPurpose != "" &&
+	// 	p.Content.RequiredResourceStatus != "" {
+	// 	return nil
+	// }
+
+	// 模式2：Clause 模式
+	if len(p.Content.Clauses) == 0 {
+		return fmt.Errorf("policy content is incomplete: require legacy fields or non-empty clauses")
 	}
+
+	for i, clause := range p.Content.Clauses {
+		if strings.TrimSpace(clause.Source) == "" {
+			return fmt.Errorf("clause[%d] source is required", i)
+		}
+		if strings.TrimSpace(clause.Field) == "" {
+			return fmt.Errorf("clause[%d] field is required", i)
+		}
+		if strings.TrimSpace(clause.Op) == "" {
+			return fmt.Errorf("clause[%d] op is required", i)
+		}
+
+		switch strings.ToLower(strings.TrimSpace(clause.Source)) {
+		case model.ClauseSourceEvidence, model.ClauseSourceSnapshot, model.ClauseSourceContext:
+		default:
+			return fmt.Errorf("clause[%d] source %q is invalid", i, clause.Source)
+		}
+
+		switch strings.ToLower(strings.TrimSpace(clause.Op)) {
+		case model.ClauseOpEq:
+		default:
+			return fmt.Errorf("clause[%d] op %q is unsupported", i, clause.Op)
+		}
+
+		if clause.Owner != "" {
+			switch strings.ToLower(strings.TrimSpace(clause.Owner)) {
+			case model.ClauseOwnerRequester, model.ClauseOwnerProvider, model.ClauseOwnerAuthority:
+			default:
+				return fmt.Errorf("clause[%d] owner %q is invalid", i, clause.Owner)
+			}
+		}
+	}
+
 	return nil
 }
 

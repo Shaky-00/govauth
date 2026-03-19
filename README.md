@@ -14,3 +14,11 @@ Current goal:
 - 执行一次Evaluation
 - 生成一个Artifact
 
+
+## APP On
+go mod tidy  
+go build ./cmd/server  
+
+make happy   
+make deny  
+make invalid  

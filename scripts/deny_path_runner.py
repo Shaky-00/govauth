@@ -64,10 +64,36 @@ def run_once(base_url: str):
     policy_req = {
         "name": "cross-domain research access policy deny-path",
         "content": {
-            "required_role": "researcher",
-            "required_department": "lab-a",
-            "required_purpose": "study",
-            "required_resource_status": "active",
+            "clauses": [
+                {
+                    "source": "evidence",
+                    "field": "role",
+                    "op": "eq",
+                    "value": "researcher",
+                    "owner": "requester"
+                },
+                {
+                    "source": "evidence",
+                    "field": "department",
+                    "op": "eq",
+                    "value": "lab-a",
+                    "owner": "requester"
+                },
+                {
+                    "source": "context",
+                    "field": "purpose",
+                    "op": "eq",
+                    "value": "study",
+                    "owner": "requester"
+                },
+                {
+                    "source": "snapshot",
+                    "field": "resource_status",
+                    "op": "eq",
+                    "value": "active",
+                    "owner": "provider"
+                }
+            ],
             "description": "拒绝不满足科研角色或部门约束的访问请求",
         },
     }

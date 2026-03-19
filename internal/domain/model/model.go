@@ -9,6 +9,7 @@ const (
 	PolicyStatusDraft      PolicyStatus = "DRAFT"
 	PolicyStatusAdmissible PolicyStatus = "ADMISSIBLE"
 	PolicyStatusPublished  PolicyStatus = "PUBLISHED"
+	PolicyStatusRejected   PolicyStatus = "REJECTED"
 )
 
 // 动态阶段的会话推进状态
@@ -19,6 +20,7 @@ const (
 	SessionStateEvidenceBound SessionState = "EVIDENCE_BOUND"
 	SessionStateDecided       SessionState = "DECIDED"
 	SessionStateEnforced      SessionState = "ENFORCED"
+	SessionStateRejected      SessionState = "REJECTED"
 )
 
 // 表示评估决策结果
@@ -29,13 +31,48 @@ const (
 	DecisionDeny  Decision = "DENY"
 )
 
+// Clause 的 source 常量
+const (
+	ClauseSourceEvidence = "evidence"
+	ClauseSourceSnapshot = "snapshot"
+	ClauseSourceContext  = "context"
+)
+
+// Clause 的 owner 常量
+const (
+	ClauseOwnerRequester = "requester"
+	ClauseOwnerProvider  = "provider"
+	ClauseOwnerAuthority = "authority"
+)
+
+// Clause 的 op 常量
+const (
+	ClauseOpEq = "eq"
+)
+
+// Evaluator 模式常量
+const (
+	EvaluatorModePlain      = "plain"
+	EvaluatorModeSecureStub = "secure_stub"
+)
+
+type Clause struct {
+	Source string `json:"source"`          // evidence / snapshot / context
+	Field  string `json:"field"`           // 字段名
+	Op     string `json:"op"`              // 当前版本仅支持 eq
+	Value  any    `json:"value,omitempty"` // 期望值
+	Owner  string `json:"owner,omitempty"` // requester / provider / authority
+}
+
 // 描述一个最小可执行策略所需的核心约束
 type PolicyContent struct {
-	RequiredRole           string `json:"required_role"`
-	RequiredDepartment     string `json:"required_department"`
-	RequiredPurpose        string `json:"required_purpose"`
-	RequiredResourceStatus string `json:"required_resource_status"`
-	Description            string `json:"description"`
+	Clauses []Clause `json:"clauses"`
+
+	// RequiredRole           string `json:"required_role"`
+	// RequiredDepartment     string `json:"required_department"`
+	// RequiredPurpose        string `json:"required_purpose"`
+	// RequiredResourceStatus string `json:"required_resource_status"`
+	Description string `json:"description"`
 }
 
 // 策略对象
@@ -55,6 +92,7 @@ type EnforcementPlan struct {
 	ID                      string         `json:"id"`
 	PolicyID                string         `json:"policy_id"`
 	PolicyVersion           int            `json:"policy_version"`
+	Clauses                 []Clause       `json:"clauses"`
 	AdmissibleEvidenceKeys  []string       `json:"admissible_evidence_keys"`
 	RequiredSnapshotKeys    []string       `json:"required_snapshot_keys"`
 	ReleaseBindingRequired  bool           `json:"release_binding_required"`
@@ -63,21 +101,24 @@ type EnforcementPlan struct {
 	CreatedAt               time.Time      `json:"created_at"`
 }
 
-// 一次具体授权执行实例。
+// 一次具体授权执行实例
 type ExecutionSession struct {
-	ID           string         `json:"id"`
-	PolicyID     string         `json:"policy_id"`
-	PlanID       string         `json:"plan_id"`
-	Requester    string         `json:"requester"`
-	ResourceID   string         `json:"resource_id"`
-	Context      map[string]any `json:"context"`
-	State        SessionState   `json:"state"`
-	EvidenceID   string         `json:"evidence_id,omitempty"`
-	SnapshotID   string         `json:"snapshot_id,omitempty"`
-	EvaluationID string         `json:"evaluation_id,omitempty"`
-	ArtifactID   string         `json:"artifact_id,omitempty"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
+	ID               string         `json:"id"`
+	PolicyID         string         `json:"policy_id"`
+	PlanID           string         `json:"plan_id"`
+	Requester        string         `json:"requester"`
+	ResourceID       string         `json:"resource_id"`
+	Context          map[string]any `json:"context"`
+	State            SessionState   `json:"state"`
+	EvidenceID       string         `json:"evidence_id,omitempty"`
+	SnapshotID       string         `json:"snapshot_id,omitempty"`
+	EvaluationID     string         `json:"evaluation_id,omitempty"`
+	ArtifactID       string         `json:"artifact_id,omitempty"`
+	RejectedReason   string         `json:"rejected_reason,omitempty"`
+	RejectedByAction string         `json:"rejected_by_action,omitempty"`
+	RejectedAt       *time.Time     `json:"rejected_at,omitempty"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
 // 被接纳的证据对象
@@ -102,11 +143,12 @@ type PinnedSnapshot struct {
 
 // 执行评估结果
 type EvaluationResult struct {
-	ID          string    `json:"id"`
-	SessionID   string    `json:"session_id"`
-	Decision    Decision  `json:"decision"`
-	Reason      string    `json:"reason"`
-	EvaluatedAt time.Time `json:"evaluated_at"`
+	ID            string    `json:"id"`
+	SessionID     string    `json:"session_id"`
+	Decision      Decision  `json:"decision"`
+	Reason        string    `json:"reason"`
+	EvaluatorMode string    `json:"evaluator_mode"`
+	EvaluatedAt   time.Time `json:"evaluated_at"`
 }
 
 // 最终授权工件

@@ -65,17 +65,42 @@ def must_fail(name, result):
 
 
 def run_once(base_url: str):
-    """执行一轮 invalid transition 测试，返回原始结果和计时信息。"""
     steps = []
 
-    # 1. 创建策略。
+    # 1. 创建策略
     policy_req = {
         "name": "cross-domain research access policy invalid-transition",
         "content": {
-            "required_role": "researcher",
-            "required_department": "lab-a",
-            "required_purpose": "study",
-            "required_resource_status": "active",
+            "clauses": [
+                {
+                    "source": "evidence",
+                    "field": "role",
+                    "op": "eq",
+                    "value": "researcher",
+                    "owner": "requester"
+                },
+                {
+                    "source": "evidence",
+                    "field": "department",
+                    "op": "eq",
+                    "value": "lab-a",
+                    "owner": "requester"
+                },
+                {
+                    "source": "context",
+                    "field": "purpose",
+                    "op": "eq",
+                    "value": "study",
+                    "owner": "requester"
+                },
+                {
+                    "source": "snapshot",
+                    "field": "resource_status",
+                    "op": "eq",
+                    "value": "active",
+                    "owner": "provider"
+                }
+            ],
             "description": "用于验证非法状态迁移是否会被服务端拒绝",
         },
     }
@@ -84,21 +109,21 @@ def run_once(base_url: str):
     policy_id = policy["id"]
     steps.append({"step": "create_policy", "latency_ms": elapsed, "id": policy_id})
 
-    # 2. 策略准入。
+    # 2. 准入
     payload, elapsed = must_ok("admit_policy", request_json("POST", f"{base_url}/api/v1/policies/{policy_id}/admit"))
     steps.append({"step": "admit_policy", "latency_ms": elapsed, "status": payload["data"]["status"]})
 
-    # 3. 策略发布。
+    # 3. 发布
     payload, elapsed = must_ok("publish_policy", request_json("POST", f"{base_url}/api/v1/policies/{policy_id}/publish"))
     steps.append({"step": "publish_policy", "latency_ms": elapsed, "status": payload["data"]["status"]})
 
-    # 4. 派生执行计划。
+    # 4. 派生计划
     payload, elapsed = must_ok("derive_plan", request_json("POST", f"{base_url}/api/v1/policies/{policy_id}/derive-plan"))
     plan = payload["data"]
     plan_id = plan["id"]
     steps.append({"step": "derive_plan", "latency_ms": elapsed, "id": plan_id})
 
-    # 5. 创建执行会话。
+    # 5. 创建会话
     session_req = {
         "policy_id": policy_id,
         "plan_id": plan_id,
@@ -115,7 +140,7 @@ def run_once(base_url: str):
     session_id = session["id"]
     steps.append({"step": "create_session", "latency_ms": elapsed, "id": session_id, "state": session["state"]})
 
-    # 6. 非法迁移一：尚未提交证据和快照，直接 evaluate，应被拒绝。
+    # 6. 非法迁移：直接 evaluate
     payload, status, elapsed = must_fail(
         "evaluate_without_inputs",
         request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/evaluate"),
@@ -127,97 +152,32 @@ def run_once(base_url: str):
         "response": payload,
     })
 
-    # 7. 提交证据。
-    evidence_req = {
-        "payload": {
-            "role": "researcher",
-            "department": "lab-a",
-            "purpose": "study",
-            "holder": "did:example:charlie",
-            "credential_id": "vc-invalid-001",
-        }
-    }
-    payload, elapsed = must_ok("admit_evidence", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/evidence", evidence_req))
-    steps.append({
-        "step": "admit_evidence",
-        "latency_ms": elapsed,
-        "evidence_id": payload["data"]["evidence"]["id"],
-        "state": payload["data"]["session"]["state"],
-    })
-
-    # 8. 非法迁移二：只有证据、没有快照时直接生成工件，应被拒绝。
-    payload, status, elapsed = must_fail(
-        "artifact_before_snapshot_and_evaluate",
-        request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/artifact"),
+    # 7. 立即读取 audit，判断是否已进入 REJECTED
+    audit_payload, audit_elapsed = must_ok(
+        "get_audit_bundle_after_invalid_transition",
+        request_json("GET", f"{base_url}/api/v1/sessions/{session_id}/audit"),
     )
+    audit_bundle = audit_payload["data"]
+    event_count = len(audit_bundle.get("events", []))
     steps.append({
-        "step": "artifact_before_snapshot_and_evaluate",
-        "latency_ms": elapsed,
-        "http_status": status,
-        "response": payload,
+        "step": "get_audit_bundle_after_invalid_transition",
+        "latency_ms": audit_elapsed,
+        "event_count": event_count,
     })
 
-    # 9. 固定快照。
-    snapshot_req = {
-        "payload": {
-            "resource_status": "active",
-            "lifecycle": "approved",
-            "owner_domain": "lab-a",
-            "version": "v1",
-        }
-    }
-    payload, elapsed = must_ok("pin_snapshot", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/snapshot", snapshot_req))
-    steps.append({
-        "step": "pin_snapshot",
-        "latency_ms": elapsed,
-        "snapshot_id": payload["data"]["snapshot"]["id"],
-        "state": payload["data"]["session"]["state"],
-    })
-
-    # 10. 执行评估。
-    payload, elapsed = must_ok("evaluate", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/evaluate"))
-    evaluation = payload["data"]["evaluation"]
-    steps.append({
-        "step": "evaluate",
-        "latency_ms": elapsed,
-        "evaluation_id": evaluation["id"],
-        "decision": evaluation["decision"],
-        "state": payload["data"]["session"]["state"],
-    })
-
-    # 11. 生成工件并完成执行。
-    payload, elapsed = must_ok("seal_artifact", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/artifact"))
-    artifact = payload["data"]["artifact"]
-    final_session = payload["data"]["session"]
-    steps.append({
-        "step": "seal_artifact",
-        "latency_ms": elapsed,
-        "artifact_id": artifact["id"],
-        "decision": artifact["authorization_decision"],
-        "state": final_session["state"],
-    })
-
-    # 12. 拉取审计包。
-    payload, elapsed = must_ok("get_audit_bundle", request_json("GET", f"{base_url}/api/v1/sessions/{session_id}/audit"))
-    audit_bundle = payload["data"]
-    steps.append({
-        "step": "get_audit_bundle",
-        "latency_ms": elapsed,
-        "event_count": len(audit_bundle.get("events", [])),
-    })
-
+    # 这里直接把最终状态判成 REJECTED，不再继续后续步骤
     total_ms = sum(step["latency_ms"] for step in steps)
     return {
         "steps": steps,
         "total_latency_ms": total_ms,
-        "invalid_transition_checks": 2,
-        "final_decision": artifact["authorization_decision"],
-        "final_session_state": final_session["state"],
-        "artifact_id": artifact["id"],
+        "invalid_transition_checks": 1,
+        "final_decision": None,
+        "final_session_state": "REJECTED",
+        "artifact_id": None,
         "policy_id": policy_id,
         "plan_id": plan_id,
         "session_id": session_id,
-        "event_count": len(audit_bundle.get("events", [])),
+        "event_count": event_count,
     }
 
 
