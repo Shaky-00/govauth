@@ -61,6 +61,7 @@ const (
 const (
 	SecureBackendModeLocalPlain = "local_plain"
 	SecureBackendModeMockMPC    = "mock_mpc"
+	SecureBackendModeRealMPC    = "real_mpc"
 )
 
 type Clause struct {
@@ -147,9 +148,11 @@ type PinnedSnapshot struct {
 // --------- 新增：MPC-orioented 核心模型
 // Input 的结构：source -> field -> value
 type SecurePartyInput struct {
-	Party  string                    `json:"party"`
-	Inputs map[string]map[string]any `json:"inputs"`
-	Meta   map[string]any            `json:"meta,omitempty"`
+	Party         string                         `json:"party"`
+	Inputs        map[string]map[string]any      `json:"inputs"`
+	EncodedInputs map[string]map[string][]string `json:"encoded_inputs,omitempty"`
+	ShareMap      map[string][]string            `json:"share_map,omitempty"`
+	Meta          map[string]any                 `json:"meta,omitempty"`
 }
 
 // 一次安全计算任务所需的完整多方输入包
@@ -159,6 +162,8 @@ type SecureInputPackage struct {
 	PolicyID        string             `json:"policy_id"`
 	PlanID          string             `json:"plan_id"`
 	Parties         []SecurePartyInput `json:"parties"`
+	PartyCount      int                `json:"party_count,omitempty"`
+	Threshold       int                `json:"threshold,omitempty"`
 	ClauseCount     int                `json:"clause_count"`
 	TotalFieldCount int                `json:"total_field_count"`
 	BuiltAt         time.Time          `json:"built_at"`

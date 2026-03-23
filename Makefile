@@ -2,7 +2,7 @@
 
 # 启动服务
 run:
-	go run ./cmd/server
+	EVALUATOR_MODE=secure_orchestrating SECURE_BACKEND_MODE=real_mpc go run ./cmd/server
 
 # 清理依赖
 tidy:
@@ -10,15 +10,13 @@ tidy:
 
 # Go 单元测试
 test:
-	go test ./...
+	go test ./...	
 
-# Happy Path 测试
 happy:
-	EXPECT_MODE=secure_stub bash ./scripts/run_happy_path.sh
+	EXPECT_MODE=secure_orchestrating EXPECT_BACKEND=real_mpc bash ./scripts/run_happy_path.sh
 
-# Deny Path 测试
 deny:
-	EXPECT_MODE=secure_stub bash ./scripts/run_deny_path.sh	
+	EXPECT_MODE=secure_orchestrating EXPECT_BACKEND=real_mpc bash ./scripts/run_deny_path.sh
 
 # Invalid Transition 测试
 invalid:

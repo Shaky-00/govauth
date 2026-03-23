@@ -63,7 +63,7 @@ type SecureOrchestratingEvaluator struct {
 	backend SecureBackend
 }
 
-func NewSecureOrchestratingEvalutor(backend SecureBackend) *SecureOrchestratingEvaluator {
+func NewSecureOrchestratingEvaluator(backend SecureBackend) *SecureOrchestratingEvaluator {
 	if backend == nil {
 		backend = NewMockMPCBackend()
 	}
@@ -86,7 +86,10 @@ func NewSecureStubEvaluator() *SecureOrchestratingEvaluator {
 }
 
 func (e *SecureOrchestratingEvaluator) Mode() string {
-	return model.EvaluatorModeSecureStub
+	if e == nil || strings.TrimSpace(e.mode) == "" {
+		return model.EvaluatorModeSecureOrchestrating
+	}
+	return e.mode
 }
 
 func (e *SecureOrchestratingEvaluator) Evaluate(in EvaluationInput) (*model.EvaluationResult, error) {
@@ -117,24 +120,42 @@ func buildSecureInputPackage(in EvaluationInput) (*model.SecureInputPackage, err
 	parties := make([]model.SecurePartyInput, 0, len(partyView))
 	totalFieldCount := 0
 
-	for _, owner := range []string{
+	orderedOwners := []string{
 		model.ClauseOwnerRequester,
 		model.ClauseOwnerProvider,
 		model.ClauseOwnerAuthority,
-	} {
+	}
+
+	partyCount := len(orderedOwners)
+	threshold := 2
+	if threshold > partyCount {
+		threshold = partyCount
+	}
+
+	for _, owner := range orderedOwners {
 		sourceView := partyView[owner]
 		if sourceView == nil {
 			sourceView = map[string]map[string]any{}
 		}
 
+		encodedInputs := encodeSecureInputs(owner, sourceView, partyCount)
+		shareMap := flattenEncodedInputMap(encodedInputs)
+
+		fieldCount := countSecureFields(sourceView)
+
 		parties = append(parties, model.SecurePartyInput{
-			Party:  owner,
-			Inputs: sourceView,
+			Party:         owner,
+			Inputs:        sourceView,
+			EncodedInputs: encodedInputs,
+			ShareMap:      shareMap,
 			Meta: map[string]any{
-				"field_count": countSecureFields(sourceView),
+				"field_count": fieldCount,
+				"share_count": len(shareMap),
+				"threshold":   threshold,
+				"share_ready": true,
 			},
 		})
-		totalFieldCount += countSecureFields(sourceView)
+		totalFieldCount += fieldCount
 	}
 
 	return &model.SecureInputPackage{
@@ -148,6 +169,8 @@ func buildSecureInputPackage(in EvaluationInput) (*model.SecureInputPackage, err
 		PolicyID:        in.Session.PolicyID,
 		PlanID:          in.Session.PlanID,
 		Parties:         parties,
+		PartyCount:      partyCount,
+		Threshold:       threshold,
 		ClauseCount:     len(in.Plan.Clauses),
 		TotalFieldCount: totalFieldCount,
 		BuiltAt:         time.Now(),
@@ -180,6 +203,8 @@ func assembleSecureExecutionRequest(
 			"release_binding_required": in.Plan.ReleaseBindingRequired,
 			"canonical_policy":         in.Plan.ExecutionHints["canonical_policy"],
 			"clause_count":             len(in.Plan.Clauses),
+			"party_count":              pkg.PartyCount,
+			"threshold":                pkg.Threshold,
 		},
 		RequestedAt: time.Now(),
 	}
@@ -193,10 +218,12 @@ func mapSecureExecutionToEvaluationResult(
 	reason := ""
 	backendMode := ""
 	evaluatedAt := time.Now()
+	decision := model.DecisionDeny
 
 	if secureResult != nil {
 		reason = secureResult.Reason
 		backendMode = secureResult.BackendMode
+		decision = secureResult.Decision
 		if !secureResult.ExecutedAt.IsZero() {
 			evaluatedAt = secureResult.ExecutedAt
 		}
@@ -204,7 +231,7 @@ func mapSecureExecutionToEvaluationResult(
 
 	return &model.EvaluationResult{
 		SessionID:       in.Session.ID,
-		Decision:        secureResult.Decision,
+		Decision:        decision,
 		Reason:          reason,
 		EvaluatorMode:   evaluatorMode,
 		BackendMode:     backendMode,

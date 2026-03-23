@@ -3,12 +3,22 @@
 
 """
 这个脚本用于自动执行 govauth 的 happy path，并测量每一步接口的耗时。
-设计目标：
-1. 不依赖第三方 Python 包，仅使用标准库。
-2. 可执行多轮，输出单步耗时、总耗时、最终决策与事件数。
-3. 将完整结果保存为 JSON，便于后续写实验或做截图。
-4. 支持校验 plain / secure_stub / secure_orchestrating 三种 evaluator 模式。
-5. 在 secure 模式下，额外校验 mock MPC 返回的结构化执行结果。
+
+本版增强点：
+1. 支持 evaluator_mode 与 backend_mode 分离校验：
+   - plain + local_plain
+   - secure_stub + mock_mpc
+   - secure_orchestrating + mock_mpc
+   - secure_orchestrating + real_mpc
+2. 支持详细日志输出到 scripts/logs/ 目录。
+3. 日志记录每一步的：
+   - 请求方法 / URL
+   - 请求 payload
+   - 响应 JSON
+   - latency
+   - session 状态变化
+   - evaluator / backend / secure_execution 摘要
+4. JSON 输出继续保持结构化，便于后续实验统计。
 """
 
 import argparse
@@ -17,10 +27,44 @@ import statistics
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 
 
-def request_json(method: str, url: str, payload=None, timeout=10):
+class StepFailure(Exception):
+    pass
+
+
+def now_str():
+    """返回适合文件名与日志标识的时间字符串。"""
+    return datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+
+
+def json_dumps_safe(obj):
+    """安全转 JSON 字符串。"""
+    try:
+        return json.dumps(obj, ensure_ascii=False, indent=2)
+    except Exception:
+        return str(obj)
+
+
+class RunLogger:
+    """简单文件日志器。"""
+
+    def __init__(self, log_dir: Path, prefix: str):
+        log_dir.mkdir(parents=True, exist_ok=True)
+        self.path = log_dir / f"{prefix}_{now_str()}.log"
+
+    def write(self, message: str):
+        text = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}] {message}\n"
+        with self.path.open("a", encoding="utf-8") as f:
+            f.write(text)
+
+    def section(self, title: str):
+        self.write("=" * 30 + f" {title} " + "=" * 30)
+
+
+def request_json(method: str, url: str, payload=None, timeout=10, logger: RunLogger | None = None):
     """发送 HTTP 请求，并返回 (解析后的 JSON, 状态码, 耗时毫秒)。"""
     data = None
     headers = {"Content-Type": "application/json"}
@@ -29,12 +73,23 @@ def request_json(method: str, url: str, payload=None, timeout=10):
 
     req = urllib.request.Request(url=url, data=data, headers=headers, method=method)
 
+    if logger:
+        logger.section(f"HTTP REQUEST {method} {url}")
+        logger.write(f"request_payload=\n{json_dumps_safe(payload) if payload is not None else 'null'}")
+
     start = time.perf_counter()
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             body = resp.read().decode("utf-8")
             elapsed_ms = (time.perf_counter() - start) * 1000
-            return json.loads(body), resp.status, elapsed_ms
+            parsed = json.loads(body)
+
+            if logger:
+                logger.write(f"http_status={resp.status}")
+                logger.write(f"latency_ms={elapsed_ms:.3f}")
+                logger.write(f"response_body=\n{json_dumps_safe(parsed)}")
+
+            return parsed, resp.status, elapsed_ms
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8")
         elapsed_ms = (time.perf_counter() - start) * 1000
@@ -42,11 +97,13 @@ def request_json(method: str, url: str, payload=None, timeout=10):
             parsed = json.loads(body)
         except Exception:
             parsed = {"raw": body}
+
+        if logger:
+            logger.write(f"http_status={e.code}")
+            logger.write(f"latency_ms={elapsed_ms:.3f}")
+            logger.write(f"response_body=\n{json_dumps_safe(parsed)}")
+
         return parsed, e.code, elapsed_ms
-
-
-class StepFailure(Exception):
-    pass
 
 
 def must_ok(name, result):
@@ -58,7 +115,7 @@ def must_ok(name, result):
 
 
 def normalize_expect_mode(expect_mode: str) -> str:
-    """规范化期望模式。"""
+    """规范化 evaluator 模式。"""
     mode = (expect_mode or "").strip().lower()
     allowed = {"plain", "secure_stub", "secure_orchestrating"}
     if mode not in allowed:
@@ -66,7 +123,25 @@ def normalize_expect_mode(expect_mode: str) -> str:
     return mode
 
 
-def validate_evaluation_for_mode(evaluation: dict, expect_mode: str):
+def normalize_expect_backend(expect_backend: str, expect_mode: str) -> str:
+    """规范化 backend 模式；支持 auto 自动推导。"""
+    backend = (expect_backend or "").strip().lower()
+    allowed = {"auto", "local_plain", "mock_mpc", "real_mpc"}
+    if backend not in allowed:
+        raise StepFailure(f"--expect-backend 不合法：{expect_backend}，必须是 {sorted(allowed)} 之一")
+
+    if backend == "auto":
+        if expect_mode == "plain":
+            return "local_plain"
+        if expect_mode == "secure_stub":
+            return "mock_mpc"
+        if expect_mode == "secure_orchestrating":
+            # 这里默认仍保守给 mock_mpc，若你已切 real_mpc，请命令行显式指定
+            return "mock_mpc"
+    return backend
+
+
+def validate_evaluation_for_mode(evaluation: dict, expect_mode: str, expect_backend: str):
     """
     根据期望模式校验 evaluate 返回结果。
     返回：
@@ -78,30 +153,28 @@ def validate_evaluation_for_mode(evaluation: dict, expect_mode: str):
     backend_mode = evaluation.get("backend_mode")
     secure_execution = evaluation.get("secure_execution")
 
+    if evaluator_mode != expect_mode:
+        raise StepFailure(
+            f"预期 evaluator_mode={expect_mode}，但实际为 {evaluator_mode}"
+        )
+
+    if backend_mode != expect_backend:
+        raise StepFailure(
+            f"预期 backend_mode={expect_backend}，但实际为 {backend_mode}"
+        )
+
     if expect_mode == "plain":
-        if evaluator_mode != "plain":
-            raise StepFailure(f"plain 模式下预期 evaluator_mode=plain，但实际为 {evaluator_mode}")
-        if backend_mode != "local_plain":
-            raise StepFailure(f"plain 模式下预期 backend_mode=local_plain，但实际为 {backend_mode}")
         if secure_execution is not None:
             raise StepFailure("plain 模式下不应返回 secure_execution")
         return evaluator_mode, backend_mode, secure_execution
 
-    # secure_stub / secure_orchestrating 统一走 secure 校验
-    if evaluator_mode != expect_mode:
-        raise StepFailure(
-            f"{expect_mode} 模式下预期 evaluator_mode={expect_mode}，但实际为 {evaluator_mode}"
-        )
-
-    if backend_mode != "mock_mpc":
-        raise StepFailure(f"{expect_mode} 模式下预期 backend_mode=mock_mpc，但实际为 {backend_mode}")
-
+    # secure 模式必须有 secure_execution
     if not isinstance(secure_execution, dict):
         raise StepFailure(f"{expect_mode} 模式下 secure_execution 不应为空")
 
-    if secure_execution.get("backend_mode") != "mock_mpc":
+    if secure_execution.get("backend_mode") != expect_backend:
         raise StepFailure(
-            f"{expect_mode} 模式下 secure_execution.backend_mode 应为 mock_mpc，"
+            f"{expect_mode} 模式下 secure_execution.backend_mode 应为 {expect_backend}，"
             f"但实际为 {secure_execution.get('backend_mode')}"
         )
 
@@ -158,10 +231,22 @@ def extract_secure_execution_brief(secure_execution: dict | None) -> dict:
     }
 
 
-def run_once(base_url: str, expect_mode: str):
+def log_step_result(logger: RunLogger, step_name: str, step_result: dict):
+    """把步骤结果详细写入日志。"""
+    logger.section(f"STEP RESULT {step_name}")
+    logger.write(json_dumps_safe(step_result))
+
+
+def run_once(base_url: str, expect_mode: str, expect_backend: str, logger: RunLogger):
     """执行一轮完整 happy path，返回原始结果和计时信息。"""
     steps = []
     expect_mode = normalize_expect_mode(expect_mode)
+    expect_backend = normalize_expect_backend(expect_backend, expect_mode)
+
+    logger.section("RUN START")
+    logger.write(f"expect_mode={expect_mode}")
+    logger.write(f"expect_backend={expect_backend}")
+    logger.write(f"base_url={base_url}")
 
     # 1. 创建策略。
     policy_req = {
@@ -200,24 +285,32 @@ def run_once(base_url: str, expect_mode: str):
             "description": "允许满足科研用途与部门约束的请求访问活跃数据资源",
         },
     }
-    payload, elapsed = must_ok("create_policy", request_json("POST", f"{base_url}/api/v1/policies", policy_req))
+    payload, elapsed = must_ok("create_policy", request_json("POST", f"{base_url}/api/v1/policies", policy_req, logger=logger))
     policy = payload["data"]
     policy_id = policy["id"]
-    steps.append({"step": "create_policy", "latency_ms": elapsed, "id": policy_id})
+    step_result = {"step": "create_policy", "latency_ms": elapsed, "id": policy_id}
+    steps.append(step_result)
+    log_step_result(logger, "create_policy", step_result)
 
     # 2. 策略准入。
-    payload, elapsed = must_ok("admit_policy", request_json("POST", f"{base_url}/api/v1/policies/{policy_id}/admit"))
-    steps.append({"step": "admit_policy", "latency_ms": elapsed, "status": payload["data"]["status"]})
+    payload, elapsed = must_ok("admit_policy", request_json("POST", f"{base_url}/api/v1/policies/{policy_id}/admit", logger=logger))
+    step_result = {"step": "admit_policy", "latency_ms": elapsed, "status": payload["data"]["status"]}
+    steps.append(step_result)
+    log_step_result(logger, "admit_policy", step_result)
 
     # 3. 策略发布。
-    payload, elapsed = must_ok("publish_policy", request_json("POST", f"{base_url}/api/v1/policies/{policy_id}/publish"))
-    steps.append({"step": "publish_policy", "latency_ms": elapsed, "status": payload["data"]["status"]})
+    payload, elapsed = must_ok("publish_policy", request_json("POST", f"{base_url}/api/v1/policies/{policy_id}/publish", logger=logger))
+    step_result = {"step": "publish_policy", "latency_ms": elapsed, "status": payload["data"]["status"]}
+    steps.append(step_result)
+    log_step_result(logger, "publish_policy", step_result)
 
     # 4. 派生执行计划。
-    payload, elapsed = must_ok("derive_plan", request_json("POST", f"{base_url}/api/v1/policies/{policy_id}/derive-plan"))
+    payload, elapsed = must_ok("derive_plan", request_json("POST", f"{base_url}/api/v1/policies/{policy_id}/derive-plan", logger=logger))
     plan = payload["data"]
     plan_id = plan["id"]
-    steps.append({"step": "derive_plan", "latency_ms": elapsed, "id": plan_id})
+    step_result = {"step": "derive_plan", "latency_ms": elapsed, "id": plan_id}
+    steps.append(step_result)
+    log_step_result(logger, "derive_plan", step_result)
 
     # 5. 创建执行会话。
     session_req = {
@@ -231,10 +324,12 @@ def run_once(base_url: str, expect_mode: str):
             "request_ip": "127.0.0.1",
         },
     }
-    payload, elapsed = must_ok("create_session", request_json("POST", f"{base_url}/api/v1/sessions", session_req))
+    payload, elapsed = must_ok("create_session", request_json("POST", f"{base_url}/api/v1/sessions", session_req, logger=logger))
     session = payload["data"]
     session_id = session["id"]
-    steps.append({"step": "create_session", "latency_ms": elapsed, "id": session_id, "state": session["state"]})
+    step_result = {"step": "create_session", "latency_ms": elapsed, "id": session_id, "state": session["state"]}
+    steps.append(step_result)
+    log_step_result(logger, "create_session", step_result)
 
     # 6. 提交证据。
     evidence_req = {
@@ -246,13 +341,15 @@ def run_once(base_url: str, expect_mode: str):
             "credential_id": "vc-001",
         }
     }
-    payload, elapsed = must_ok("admit_evidence", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/evidence", evidence_req))
-    steps.append({
+    payload, elapsed = must_ok("admit_evidence", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/evidence", evidence_req, logger=logger))
+    step_result = {
         "step": "admit_evidence",
         "latency_ms": elapsed,
         "evidence_id": payload["data"]["evidence"]["id"],
         "state": payload["data"]["session"]["state"],
-    })
+    }
+    steps.append(step_result)
+    log_step_result(logger, "admit_evidence", step_result)
 
     # 7. 固定快照。
     snapshot_req = {
@@ -263,18 +360,22 @@ def run_once(base_url: str, expect_mode: str):
             "version": "v1",
         }
     }
-    payload, elapsed = must_ok("pin_snapshot", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/snapshot", snapshot_req))
-    steps.append({
+    payload, elapsed = must_ok("pin_snapshot", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/snapshot", snapshot_req, logger=logger))
+    step_result = {
         "step": "pin_snapshot",
         "latency_ms": elapsed,
         "snapshot_id": payload["data"]["snapshot"]["id"],
         "state": payload["data"]["session"]["state"],
-    })
+    }
+    steps.append(step_result)
+    log_step_result(logger, "pin_snapshot", step_result)
 
     # 8. 执行评估。
-    payload, elapsed = must_ok("evaluate", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/evaluate"))
+    payload, elapsed = must_ok("evaluate", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/evaluate", logger=logger))
     evaluation = payload["data"]["evaluation"]
-    evaluator_mode, backend_mode, secure_execution = validate_evaluation_for_mode(evaluation, expect_mode)
+    evaluator_mode, backend_mode, secure_execution = validate_evaluation_for_mode(
+        evaluation, expect_mode, expect_backend
+    )
 
     evaluate_step = {
         "step": "evaluate",
@@ -288,37 +389,43 @@ def run_once(base_url: str, expect_mode: str):
     }
     evaluate_step.update(extract_secure_execution_brief(secure_execution))
     steps.append(evaluate_step)
+    log_step_result(logger, "evaluate", evaluate_step)
 
     # 9. 生成工件并完成执行。
-    payload, elapsed = must_ok("seal_artifact", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/artifact"))
+    payload, elapsed = must_ok("seal_artifact", request_json("POST", f"{base_url}/api/v1/sessions/{session_id}/artifact", logger=logger))
     artifact = payload["data"]["artifact"]
     final_session = payload["data"]["session"]
 
     validate_happy_path_outcome(evaluation, artifact, final_session)
 
-    steps.append({
+    step_result = {
         "step": "seal_artifact",
         "latency_ms": elapsed,
         "artifact_id": artifact["id"],
         "decision": artifact["authorization_decision"],
         "state": final_session["state"],
-    })
+    }
+    steps.append(step_result)
+    log_step_result(logger, "seal_artifact", step_result)
 
     # 10. 拉取审计包。
-    payload, elapsed = must_ok("get_audit_bundle", request_json("GET", f"{base_url}/api/v1/sessions/{session_id}/audit"))
+    payload, elapsed = must_ok("get_audit_bundle", request_json("GET", f"{base_url}/api/v1/sessions/{session_id}/audit", logger=logger))
     audit_bundle = payload["data"]
     events = audit_bundle.get("events", [])
 
-    steps.append({
+    step_result = {
         "step": "get_audit_bundle",
         "latency_ms": elapsed,
         "event_count": len(events),
-    })
+    }
+    steps.append(step_result)
+    log_step_result(logger, "get_audit_bundle", step_result)
 
     total_ms = sum(step["latency_ms"] for step in steps)
 
-    return {
+    run_result = {
         "expect_mode": expect_mode,
+        "expect_backend": expect_backend,
         "steps": steps,
         "total_latency_ms": total_ms,
         "final_decision": artifact["authorization_decision"],
@@ -336,7 +443,12 @@ def run_once(base_url: str, expect_mode: str):
             "backend_mode": backend_mode,
             "secure_execution": secure_execution,
         },
+        "log_file": str(logger.path),
     }
+
+    logger.section("RUN END")
+    logger.write(json_dumps_safe(run_result))
+    return run_result
 
 
 def print_summary(runs):
@@ -348,7 +460,6 @@ def print_summary(runs):
     print(f"总耗时最小值: {min(totals):.3f} ms")
     print(f"总耗时最大值: {max(totals):.3f} ms")
 
-    # 汇总每一步平均耗时。
     step_names = [step["step"] for step in runs[0]["steps"]]
     print("\n每一步平均耗时：")
     for step_name in step_names:
@@ -363,12 +474,14 @@ def print_summary(runs):
     print("\n最后一轮结果：")
     last = runs[-1]
     print(f"- expect_mode: {last['expect_mode']}")
+    print(f"- expect_backend: {last['expect_backend']}")
     print(f"- final_decision: {last['final_decision']}")
     print(f"- final_session_state: {last['final_session_state']}")
     print(f"- event_count: {last['event_count']}")
     print(f"- artifact_id: {last['artifact_id']}")
     print(f"- evaluator_mode: {last['evaluation']['evaluator_mode']}")
     print(f"- backend_mode: {last['evaluation']['backend_mode']}")
+    print(f"- log_file: {last['log_file']}")
 
     secure_execution = last["evaluation"].get("secure_execution")
     if secure_execution:
@@ -389,19 +502,37 @@ def main():
         choices=["plain", "secure_stub", "secure_orchestrating"],
         help="期望的 evaluator 模式，默认 plain",
     )
+    parser.add_argument(
+        "--expect-backend",
+        default="auto",
+        choices=["auto", "local_plain", "mock_mpc", "real_mpc"],
+        help="期望的 backend 模式，默认 auto。若你使用 RealMPCBackend，请显式传 real_mpc。",
+    )
+    parser.add_argument(
+        "--log-dir",
+        default="scripts/logs",
+        help="详细日志输出目录，默认 scripts/logs",
+    )
     args = parser.parse_args()
 
     runs = []
     for idx in range(args.rounds):
-        run = run_once(args.base_url, args.expect_mode)
-        runs.append(run)
-        print(
-            f"第 {idx + 1} 轮完成："
-            f"mode={run['expect_mode']} "
-            f"decision={run['final_decision']} "
-            f"backend={run['evaluation']['backend_mode']} "
-            f"total={run['total_latency_ms']:.3f} ms"
-        )
+        logger = RunLogger(Path(args.log_dir), prefix=f"happy_path_round_{idx + 1}")
+        try:
+            run = run_once(args.base_url, args.expect_mode, args.expect_backend, logger)
+            runs.append(run)
+            print(
+                f"第 {idx + 1} 轮完成："
+                f"mode={run['expect_mode']} "
+                f"backend={run['expect_backend']} "
+                f"decision={run['final_decision']} "
+                f"actual_backend={run['evaluation']['backend_mode']} "
+                f"total={run['total_latency_ms']:.3f} ms"
+            )
+        except Exception as e:
+            logger.section("RUN FAILED")
+            logger.write(str(e))
+            raise
 
     print_summary(runs)
 

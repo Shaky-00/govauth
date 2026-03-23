@@ -58,7 +58,7 @@ func NewEvaluatorByMode(mode string) (Evaluator, error) {
 	case model.EvaluatorModeSecureStub:
 		return NewSecureStubEvaluator(), nil
 	case model.EvaluatorModeSecureOrchestrating:
-		return NewSecureOrchestratingEvalutor(NewMockMPCBackend()), nil
+		return NewSecureOrchestratingEvaluator(NewMockMPCBackend()), nil
 	default:
 		return nil, fmt.Errorf("unknown evaluator mode: %s", mode)
 	}

@@ -1,391 +1,436 @@
 {
   "runs": [
     {
-      "expect_mode": "secure_stub",
+      "expect_mode": "secure_orchestrating",
+      "expect_backend": "real_mpc",
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 2.9172699996706797,
-          "id": "policy-1774231788590-70b178643f21"
+          "latency_ms": 3.29831499766442,
+          "id": "policy-1774252182150-f161b04dfa2f"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 0.6530990003739134,
+          "latency_ms": 0.7061049982439727,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 0.5032899998695939,
+          "latency_ms": 0.6979989993851632,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.5298229998516035,
-          "id": "plan-1774231788592-0c4f974f0a76"
+          "latency_ms": 0.6936969984963071,
+          "id": "plan-1774252182154-44902d2a9fff"
         },
         {
           "step": "create_session",
-          "latency_ms": 0.5259500003376161,
-          "id": "session-1774231788593-7c189a37285c",
+          "latency_ms": 0.7027840001683217,
+          "id": "session-1774252182155-094016deb32a",
           "state": "SESSION_BOUND"
         },
         {
           "step": "admit_evidence",
-          "latency_ms": 0.5717169997296878,
-          "evidence_id": "evidence-1774231788594-270ebd3b5c74",
+          "latency_ms": 0.6127920023573097,
+          "evidence_id": "evidence-1774252182156-7e047bf82e79",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "pin_snapshot",
-          "latency_ms": 0.7774249997964944,
-          "snapshot_id": "snapshot-1774231788594-4eb83ee20f2e",
+          "latency_ms": 0.7544280015281402,
+          "snapshot_id": "snapshot-1774252182157-b57b73fc6b63",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "evaluate",
-          "latency_ms": 0.6288220001806621,
-          "evaluation_id": "eval-1774231788595-d0b44480d0e2",
+          "latency_ms": 0.7889090011303779,
+          "evaluation_id": "eval-1774252182158-55862bf11896",
           "decision": "DENY",
-          "reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department",
-          "evaluator_mode": "secure_stub",
-          "backend_mode": "mock_mpc",
+          "reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department",
+          "evaluator_mode": "secure_orchestrating",
+          "backend_mode": "real_mpc",
           "state": "DECIDED",
-          "secure_execution_id": "secure-exec-f1bbf82fb613db5a",
-          "secure_execution_backend_mode": "mock_mpc",
-          "proof_stub": "9b9cfa1a685e385d69fd450404651c77c953e9f52b15a034ccedd1592f5cadc2",
-          "transcript_len": 4,
-          "steps_len": 4,
-          "secure_execution_reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department"
+          "secure_execution_id": "secure-exec-29717236b1dc75de",
+          "secure_execution_backend_mode": "real_mpc",
+          "proof_stub": "b97fea975e51ef1f8d5d2a688eae209a9070d358119ecd4fd984fcfa6db5a07b",
+          "transcript_len": 10,
+          "steps_len": 5,
+          "secure_execution_reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department"
         },
         {
           "step": "seal_artifact",
-          "latency_ms": 0.7721259999016183,
-          "artifact_id": "artifact-1774231788596-32ee90e86d1c",
+          "latency_ms": 0.6866069998068269,
+          "artifact_id": "artifact-1774252182159-3029d17ba741",
           "decision": "DENY",
           "state": "ENFORCED"
         },
         {
           "step": "get_audit_bundle",
-          "latency_ms": 0.5934169998909056,
+          "latency_ms": 0.6116570002632216,
           "event_count": 8
         }
       ],
-      "total_latency_ms": 8.472938999602775,
+      "total_latency_ms": 9.55329299904406,
       "final_decision": "DENY",
       "final_session_state": "ENFORCED",
-      "artifact_id": "artifact-1774231788596-32ee90e86d1c",
-      "policy_id": "policy-1774231788590-70b178643f21",
-      "plan_id": "plan-1774231788592-0c4f974f0a76",
-      "session_id": "session-1774231788593-7c189a37285c",
+      "artifact_id": "artifact-1774252182159-3029d17ba741",
+      "policy_id": "policy-1774252182150-f161b04dfa2f",
+      "plan_id": "plan-1774252182154-44902d2a9fff",
+      "session_id": "session-1774252182155-094016deb32a",
       "event_count": 8,
       "evaluation": {
-        "id": "eval-1774231788595-d0b44480d0e2",
+        "id": "eval-1774252182158-55862bf11896",
         "decision": "DENY",
-        "reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department",
-        "evaluator_mode": "secure_stub",
-        "backend_mode": "mock_mpc",
+        "reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department",
+        "evaluator_mode": "secure_orchestrating",
+        "backend_mode": "real_mpc",
         "secure_execution": {
-          "execution_id": "secure-exec-f1bbf82fb613db5a",
-          "session_id": "session-1774231788593-7c189a37285c",
-          "backend_mode": "mock_mpc",
+          "execution_id": "secure-exec-29717236b1dc75de",
+          "session_id": "session-1774252182155-094016deb32a",
+          "backend_mode": "real_mpc",
           "decision": "DENY",
-          "reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department",
-          "proof_stub": "9b9cfa1a685e385d69fd450404651c77c953e9f52b15a034ccedd1592f5cadc2",
+          "reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department",
+          "proof_stub": "b97fea975e51ef1f8d5d2a688eae209a9070d358119ecd4fd984fcfa6db5a07b",
           "transcript": [
-            "mock_mpc received request=req-f8c1b9db9cb5f971 session=session-1774231788593-7c189a37285c",
-            "mock_mpc loaded 3 parties and 4 clauses",
-            "mock_mpc produced decision=DENY",
-            "mock_mpc generated proof_stub=9b9cfa1a685e385d69fd450404651c77c953e9f52b15a034ccedd1592f5cadc2"
+            "real_mpc receive request=req-38abffde345bb93f session=session-1774252182155-094016deb32a",
+            "real_mpc load package=pkd-08384a7fe0837ee7 parties=3 clauses=4",
+            "real_mpc simulate secret sharing party_count=3 threshold=2",
+            "real_mpc start secure clause evaluation",
+            "real_mpc secure compare failed owner=requester source=evidence field=role actual=visitor expected=researcher",
+            "real_mpc secure compare failed owner=requester source=evidence field=department actual=lab-b expected=lab-a",
+            "real_mpc secure compare passed owner=requester source=context field=purpose",
+            "real_mpc secure compare passed owner=provider source=snapshot field=resource_status",
+            "real_mpc reconstruct final decision=DENY",
+            "real_mpc generate proof_stub=b97fea975e51ef1f8d5d2a688eae209a9070d358119ecd4fd984fcfa6db5a07b"
           ],
           "steps": [
             {
-              "name": "receive_party_inputs",
+              "name": "receive_inputs",
               "status": "ok",
-              "detail": "received 3 party inputs"
+              "detail": "loaded secure package pkd-08384a7fe0837ee7 with 3 parties"
             },
             {
-              "name": "assemble_secure_task",
+              "name": "secret_sharing",
               "status": "ok",
-              "detail": "assembled mock secure task for plan plan-1774231788592-0c4f974f0a76"
+              "detail": "prepared pseudo shares for 3 parties with threshold=2"
             },
             {
-              "name": "execute_secure_computation",
+              "name": "secure_evaluation",
               "status": "ok",
-              "detail": "computed decision=DENY"
+              "detail": "evaluated 4 clauses in pseudo secure context"
             },
             {
-              "name": "generate_proof_stub",
+              "name": "reconstruct",
               "status": "ok",
-              "detail": "generated deterministic mock proof stub"
+              "detail": "reconstructed final decision=DENY"
+            },
+            {
+              "name": "generate_proof",
+              "status": "ok",
+              "detail": "generated pseudo MPC proof stub"
             }
           ],
           "metadata": {
             "clause_count": 4,
-            "package_id": "pkd-3a9edb3ae4b4c2a1",
+            "package_id": "pkd-08384a7fe0837ee7",
             "party_count": 3,
+            "share_ready": true,
+            "threshold": 2,
             "total_field_count": 4
           },
-          "executed_at": "2026-03-23T10:09:48.595765752+08:00"
+          "executed_at": "2026-03-23T15:49:42.158858637+08:00"
         }
-      }
+      },
+      "log_file": "scripts/logs/deny_path_round_1_20260323_154942_146927.log"
     },
     {
-      "expect_mode": "secure_stub",
+      "expect_mode": "secure_orchestrating",
+      "expect_backend": "real_mpc",
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 0.5687430002581095,
-          "id": "policy-1774231788598-9c8576298692"
+          "latency_ms": 0.9603319995221682,
+          "id": "policy-1774252182163-c7c019d60d12"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 0.6191110001054767,
+          "latency_ms": 0.8706109983904753,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 0.732808000066143,
+          "latency_ms": 1.1285049986327067,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.7405599999401602,
-          "id": "plan-1774231788600-dd024afa3100"
+          "latency_ms": 0.9593600007065106,
+          "id": "plan-1774252182168-047e53aba816"
         },
         {
           "step": "create_session",
-          "latency_ms": 0.6703750000269793,
-          "id": "session-1774231788601-b5b7563c5c9f",
+          "latency_ms": 2.9132969975762535,
+          "id": "session-1774252182172-a84d7cd4a5e3",
           "state": "SESSION_BOUND"
         },
         {
           "step": "admit_evidence",
-          "latency_ms": 0.6255280000004859,
-          "evidence_id": "evidence-1774231788601-c3ab087b893e",
+          "latency_ms": 0.858191997394897,
+          "evidence_id": "evidence-1774252182173-6fb3685b319c",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "pin_snapshot",
-          "latency_ms": 0.6282939998527581,
-          "snapshot_id": "snapshot-1774231788602-a839550ba7f5",
+          "latency_ms": 0.6921169988345355,
+          "snapshot_id": "snapshot-1774252182175-184603964593",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "evaluate",
-          "latency_ms": 0.5574710003202199,
-          "evaluation_id": "eval-1774231788603-4df188e7d2d5",
+          "latency_ms": 0.6657310004811734,
+          "evaluation_id": "eval-1774252182176-c97ad6857ff4",
           "decision": "DENY",
-          "reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department",
-          "evaluator_mode": "secure_stub",
-          "backend_mode": "mock_mpc",
+          "reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department",
+          "evaluator_mode": "secure_orchestrating",
+          "backend_mode": "real_mpc",
           "state": "DECIDED",
-          "secure_execution_id": "secure-exec-b0a10be478122c38",
-          "secure_execution_backend_mode": "mock_mpc",
-          "proof_stub": "52507f1b94db006b37950d31cc2e35cfe64dfcf2c6dba31f3c00a58fb267dd2a",
-          "transcript_len": 4,
-          "steps_len": 4,
-          "secure_execution_reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department"
+          "secure_execution_id": "secure-exec-489fea7bb59bcdcf",
+          "secure_execution_backend_mode": "real_mpc",
+          "proof_stub": "86a83c540d13da311a8075abf6a35a78d1cd4e7977c1f5fe0ee07c0271379c06",
+          "transcript_len": 10,
+          "steps_len": 5,
+          "secure_execution_reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department"
         },
         {
           "step": "seal_artifact",
-          "latency_ms": 0.7386869997390022,
-          "artifact_id": "artifact-1774231788603-7ffe22320caf",
+          "latency_ms": 0.7497770020563621,
+          "artifact_id": "artifact-1774252182177-dc706b76d20d",
           "decision": "DENY",
           "state": "ENFORCED"
         },
         {
           "step": "get_audit_bundle",
-          "latency_ms": 0.7016389999989769,
+          "latency_ms": 0.8014539998839609,
           "event_count": 8
         }
       ],
-      "total_latency_ms": 6.583216000308312,
+      "total_latency_ms": 10.599375993479043,
       "final_decision": "DENY",
       "final_session_state": "ENFORCED",
-      "artifact_id": "artifact-1774231788603-7ffe22320caf",
-      "policy_id": "policy-1774231788598-9c8576298692",
-      "plan_id": "plan-1774231788600-dd024afa3100",
-      "session_id": "session-1774231788601-b5b7563c5c9f",
+      "artifact_id": "artifact-1774252182177-dc706b76d20d",
+      "policy_id": "policy-1774252182163-c7c019d60d12",
+      "plan_id": "plan-1774252182168-047e53aba816",
+      "session_id": "session-1774252182172-a84d7cd4a5e3",
       "event_count": 8,
       "evaluation": {
-        "id": "eval-1774231788603-4df188e7d2d5",
+        "id": "eval-1774252182176-c97ad6857ff4",
         "decision": "DENY",
-        "reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department",
-        "evaluator_mode": "secure_stub",
-        "backend_mode": "mock_mpc",
+        "reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department",
+        "evaluator_mode": "secure_orchestrating",
+        "backend_mode": "real_mpc",
         "secure_execution": {
-          "execution_id": "secure-exec-b0a10be478122c38",
-          "session_id": "session-1774231788601-b5b7563c5c9f",
-          "backend_mode": "mock_mpc",
+          "execution_id": "secure-exec-489fea7bb59bcdcf",
+          "session_id": "session-1774252182172-a84d7cd4a5e3",
+          "backend_mode": "real_mpc",
           "decision": "DENY",
-          "reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department",
-          "proof_stub": "52507f1b94db006b37950d31cc2e35cfe64dfcf2c6dba31f3c00a58fb267dd2a",
+          "reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department",
+          "proof_stub": "86a83c540d13da311a8075abf6a35a78d1cd4e7977c1f5fe0ee07c0271379c06",
           "transcript": [
-            "mock_mpc received request=req-9806aba3f367fdcc session=session-1774231788601-b5b7563c5c9f",
-            "mock_mpc loaded 3 parties and 4 clauses",
-            "mock_mpc produced decision=DENY",
-            "mock_mpc generated proof_stub=52507f1b94db006b37950d31cc2e35cfe64dfcf2c6dba31f3c00a58fb267dd2a"
+            "real_mpc receive request=req-88b23b5fc84197e3 session=session-1774252182172-a84d7cd4a5e3",
+            "real_mpc load package=pkd-a906fc1dd2b23f16 parties=3 clauses=4",
+            "real_mpc simulate secret sharing party_count=3 threshold=2",
+            "real_mpc start secure clause evaluation",
+            "real_mpc secure compare failed owner=requester source=evidence field=role actual=visitor expected=researcher",
+            "real_mpc secure compare failed owner=requester source=evidence field=department actual=lab-b expected=lab-a",
+            "real_mpc secure compare passed owner=requester source=context field=purpose",
+            "real_mpc secure compare passed owner=provider source=snapshot field=resource_status",
+            "real_mpc reconstruct final decision=DENY",
+            "real_mpc generate proof_stub=86a83c540d13da311a8075abf6a35a78d1cd4e7977c1f5fe0ee07c0271379c06"
           ],
           "steps": [
             {
-              "name": "receive_party_inputs",
+              "name": "receive_inputs",
               "status": "ok",
-              "detail": "received 3 party inputs"
+              "detail": "loaded secure package pkd-a906fc1dd2b23f16 with 3 parties"
             },
             {
-              "name": "assemble_secure_task",
+              "name": "secret_sharing",
               "status": "ok",
-              "detail": "assembled mock secure task for plan plan-1774231788600-dd024afa3100"
+              "detail": "prepared pseudo shares for 3 parties with threshold=2"
             },
             {
-              "name": "execute_secure_computation",
+              "name": "secure_evaluation",
               "status": "ok",
-              "detail": "computed decision=DENY"
+              "detail": "evaluated 4 clauses in pseudo secure context"
             },
             {
-              "name": "generate_proof_stub",
+              "name": "reconstruct",
               "status": "ok",
-              "detail": "generated deterministic mock proof stub"
+              "detail": "reconstructed final decision=DENY"
+            },
+            {
+              "name": "generate_proof",
+              "status": "ok",
+              "detail": "generated pseudo MPC proof stub"
             }
           ],
           "metadata": {
             "clause_count": 4,
-            "package_id": "pkd-4ebf40a67a5f03c9",
+            "package_id": "pkd-a906fc1dd2b23f16",
             "party_count": 3,
+            "share_ready": true,
+            "threshold": 2,
             "total_field_count": 4
           },
-          "executed_at": "2026-03-23T10:09:48.603214496+08:00"
+          "executed_at": "2026-03-23T15:49:42.176267592+08:00"
         }
-      }
+      },
+      "log_file": "scripts/logs/deny_path_round_2_20260323_154942_162364.log"
     },
     {
-      "expect_mode": "secure_stub",
+      "expect_mode": "secure_orchestrating",
+      "expect_backend": "real_mpc",
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 0.8301479997498973,
-          "id": "policy-1774231788605-ff55edccaef8"
+          "latency_ms": 0.7634650028194301,
+          "id": "policy-1774252182181-0c2d127038c0"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 0.6995929998083739,
+          "latency_ms": 0.7011870002315845,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 0.4605039998750726,
+          "latency_ms": 0.6610899981751572,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.6594189999304945,
-          "id": "plan-1774231788607-9b732920c6b0"
+          "latency_ms": 0.9074119989236351,
+          "id": "plan-1774252182185-b7b04b450fe1"
         },
         {
           "step": "create_session",
-          "latency_ms": 0.6666740000582649,
-          "id": "session-1774231788608-34bac7778d43",
+          "latency_ms": 0.8644570007163566,
+          "id": "session-1774252182186-cb7c50f154d8",
           "state": "SESSION_BOUND"
         },
         {
           "step": "admit_evidence",
-          "latency_ms": 0.7915199998933531,
-          "evidence_id": "evidence-1774231788609-f9930b6cbd79",
+          "latency_ms": 0.8370269970328081,
+          "evidence_id": "evidence-1774252182188-aa59afbd8b62",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "pin_snapshot",
-          "latency_ms": 0.6385980000231939,
-          "snapshot_id": "snapshot-1774231788610-779557a50cf3",
+          "latency_ms": 0.7154989980335813,
+          "snapshot_id": "snapshot-1774252182189-e99e110d8739",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "evaluate",
-          "latency_ms": 0.6123630000729463,
-          "evaluation_id": "eval-1774231788610-773b3e07f718",
+          "latency_ms": 0.8141319995047525,
+          "evaluation_id": "eval-1774252182190-76fb84e070dc",
           "decision": "DENY",
-          "reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department",
-          "evaluator_mode": "secure_stub",
-          "backend_mode": "mock_mpc",
+          "reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department",
+          "evaluator_mode": "secure_orchestrating",
+          "backend_mode": "real_mpc",
           "state": "DECIDED",
-          "secure_execution_id": "secure-exec-657b2f896898ea80",
-          "secure_execution_backend_mode": "mock_mpc",
-          "proof_stub": "dd3ca75570b7d55b3be3d8c1ef77527697bdc05cc7c6d7f87f8aa97d9c2dc6c1",
-          "transcript_len": 4,
-          "steps_len": 4,
-          "secure_execution_reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department"
+          "secure_execution_id": "secure-exec-b7b3502ca55d8cf9",
+          "secure_execution_backend_mode": "real_mpc",
+          "proof_stub": "497cd2b07cf551aed272de0c110734f83f4cdc355c492c4dab4d370f2cf48b31",
+          "transcript_len": 10,
+          "steps_len": 5,
+          "secure_execution_reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department"
         },
         {
           "step": "seal_artifact",
-          "latency_ms": 0.541715000053955,
-          "artifact_id": "artifact-1774231788611-fd3a63bbdcb9",
+          "latency_ms": 0.9453349994146265,
+          "artifact_id": "artifact-1774252182192-63659cb8779d",
           "decision": "DENY",
           "state": "ENFORCED"
         },
         {
           "step": "get_audit_bundle",
-          "latency_ms": 0.7599659998049901,
+          "latency_ms": 0.8577549997426104,
           "event_count": 8
         }
       ],
-      "total_latency_ms": 6.660499999270542,
+      "total_latency_ms": 8.067358994594542,
       "final_decision": "DENY",
       "final_session_state": "ENFORCED",
-      "artifact_id": "artifact-1774231788611-fd3a63bbdcb9",
-      "policy_id": "policy-1774231788605-ff55edccaef8",
-      "plan_id": "plan-1774231788607-9b732920c6b0",
-      "session_id": "session-1774231788608-34bac7778d43",
+      "artifact_id": "artifact-1774252182192-63659cb8779d",
+      "policy_id": "policy-1774252182181-0c2d127038c0",
+      "plan_id": "plan-1774252182185-b7b04b450fe1",
+      "session_id": "session-1774252182186-cb7c50f154d8",
       "event_count": 8,
       "evaluation": {
-        "id": "eval-1774231788610-773b3e07f718",
+        "id": "eval-1774252182190-76fb84e070dc",
         "decision": "DENY",
-        "reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department",
-        "evaluator_mode": "secure_stub",
-        "backend_mode": "mock_mpc",
+        "reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department",
+        "evaluator_mode": "secure_orchestrating",
+        "backend_mode": "real_mpc",
         "secure_execution": {
-          "execution_id": "secure-exec-657b2f896898ea80",
-          "session_id": "session-1774231788608-34bac7778d43",
-          "backend_mode": "mock_mpc",
+          "execution_id": "secure-exec-b7b3502ca55d8cf9",
+          "session_id": "session-1774252182186-cb7c50f154d8",
+          "backend_mode": "real_mpc",
           "decision": "DENY",
-          "reason": "mock_mpc mismatch at owner=requester source=evidence field=role; mock_mpc mismatch at owner=requester source=evidence field=department",
-          "proof_stub": "dd3ca75570b7d55b3be3d8c1ef77527697bdc05cc7c6d7f87f8aa97d9c2dc6c1",
+          "reason": "real_mpc mismatch at owner=requester source=evidence field=role; real_mpc mismatch at owner=requester source=evidence field=department",
+          "proof_stub": "497cd2b07cf551aed272de0c110734f83f4cdc355c492c4dab4d370f2cf48b31",
           "transcript": [
-            "mock_mpc received request=req-b68872a53c973993 session=session-1774231788608-34bac7778d43",
-            "mock_mpc loaded 3 parties and 4 clauses",
-            "mock_mpc produced decision=DENY",
-            "mock_mpc generated proof_stub=dd3ca75570b7d55b3be3d8c1ef77527697bdc05cc7c6d7f87f8aa97d9c2dc6c1"
+            "real_mpc receive request=req-ccfb09ab33757de1 session=session-1774252182186-cb7c50f154d8",
+            "real_mpc load package=pkd-fa4d7c5d1b49347a parties=3 clauses=4",
+            "real_mpc simulate secret sharing party_count=3 threshold=2",
+            "real_mpc start secure clause evaluation",
+            "real_mpc secure compare failed owner=requester source=evidence field=role actual=visitor expected=researcher",
+            "real_mpc secure compare failed owner=requester source=evidence field=department actual=lab-b expected=lab-a",
+            "real_mpc secure compare passed owner=requester source=context field=purpose",
+            "real_mpc secure compare passed owner=provider source=snapshot field=resource_status",
+            "real_mpc reconstruct final decision=DENY",
+            "real_mpc generate proof_stub=497cd2b07cf551aed272de0c110734f83f4cdc355c492c4dab4d370f2cf48b31"
           ],
           "steps": [
             {
-              "name": "receive_party_inputs",
+              "name": "receive_inputs",
               "status": "ok",
-              "detail": "received 3 party inputs"
+              "detail": "loaded secure package pkd-fa4d7c5d1b49347a with 3 parties"
             },
             {
-              "name": "assemble_secure_task",
+              "name": "secret_sharing",
               "status": "ok",
-              "detail": "assembled mock secure task for plan plan-1774231788607-9b732920c6b0"
+              "detail": "prepared pseudo shares for 3 parties with threshold=2"
             },
             {
-              "name": "execute_secure_computation",
+              "name": "secure_evaluation",
               "status": "ok",
-              "detail": "computed decision=DENY"
+              "detail": "evaluated 4 clauses in pseudo secure context"
             },
             {
-              "name": "generate_proof_stub",
+              "name": "reconstruct",
               "status": "ok",
-              "detail": "generated deterministic mock proof stub"
+              "detail": "reconstructed final decision=DENY"
+            },
+            {
+              "name": "generate_proof",
+              "status": "ok",
+              "detail": "generated pseudo MPC proof stub"
             }
           ],
           "metadata": {
             "clause_count": 4,
-            "package_id": "pkd-54f938ae35b18dd4",
+            "package_id": "pkd-fa4d7c5d1b49347a",
             "party_count": 3,
+            "share_ready": true,
+            "threshold": 2,
             "total_field_count": 4
           },
-          "executed_at": "2026-03-23T10:09:48.610934201+08:00"
+          "executed_at": "2026-03-23T15:49:42.190566298+08:00"
         }
-      }
+      },
+      "log_file": "scripts/logs/deny_path_round_3_20260323_154942_180939.log"
     }
   ]
 }
