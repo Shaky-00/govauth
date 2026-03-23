@@ -4,33 +4,33 @@
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 3.007371000421699,
-          "id": "policy-1773913988840-d3ef980d3f82"
+          "latency_ms": 5.944300999999541,
+          "id": "policy-1774231308194-32e81ca9e736"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 0.845642000058433,
+          "latency_ms": 1.1579419997360674,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 0.4919639995932812,
+          "latency_ms": 1.06047999997827,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.49360199955117423,
-          "id": "plan-1773913988843-9ef16639ba1a"
+          "latency_ms": 1.4840750000075786,
+          "id": "plan-1774231308198-e691b5c91063"
         },
         {
           "step": "create_session",
-          "latency_ms": 0.6037169987394009,
-          "id": "session-1773913988843-8e8accba2ab1",
+          "latency_ms": 1.1250080001445895,
+          "id": "session-1774231308200-a3bd0a8e715b",
           "state": "SESSION_BOUND"
         },
         {
           "step": "evaluate_without_inputs",
-          "latency_ms": 0.6737879994034301,
+          "latency_ms": 0.9160499998870364,
           "http_status": 400,
           "response": {
             "message": "request failed",
@@ -39,51 +39,51 @@
         },
         {
           "step": "get_audit_bundle_after_invalid_transition",
-          "latency_ms": 0.44953600081498735,
+          "latency_ms": 0.9746860000632296,
           "event_count": 5
         }
       ],
-      "total_latency_ms": 6.565619998582406,
+      "total_latency_ms": 12.662541999816312,
       "invalid_transition_checks": 1,
       "final_decision": null,
       "final_session_state": "REJECTED",
       "artifact_id": null,
-      "policy_id": "policy-1773913988840-d3ef980d3f82",
-      "plan_id": "plan-1773913988843-9ef16639ba1a",
-      "session_id": "session-1773913988843-8e8accba2ab1",
+      "policy_id": "policy-1774231308194-32e81ca9e736",
+      "plan_id": "plan-1774231308198-e691b5c91063",
+      "session_id": "session-1774231308200-a3bd0a8e715b",
       "event_count": 5
     },
     {
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 0.6937710004422115,
-          "id": "policy-1773913988845-6a3523b82914"
+          "latency_ms": 0.9929210000336752,
+          "id": "policy-1774231308203-934f832b6f5b"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 0.6294170016190037,
+          "latency_ms": 0.8274189999610826,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 0.5997129992465489,
+          "latency_ms": 0.910208999812312,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.6918220005900366,
-          "id": "plan-1773913988848-28117d1310c6"
+          "latency_ms": 0.8530509999218339,
+          "id": "plan-1774231308206-72b69fe53eec"
         },
         {
           "step": "create_session",
-          "latency_ms": 0.7270919995789882,
-          "id": "session-1773913988848-19b7de8ba51c",
+          "latency_ms": 0.804525999683392,
+          "id": "session-1774231308207-77fe7eeb608e",
           "state": "SESSION_BOUND"
         },
         {
           "step": "evaluate_without_inputs",
-          "latency_ms": 0.6728850003128173,
+          "latency_ms": 0.7606039998790948,
           "http_status": 400,
           "response": {
             "message": "request failed",
@@ -92,51 +92,51 @@
         },
         {
           "step": "get_audit_bundle_after_invalid_transition",
-          "latency_ms": 0.724465000530472,
+          "latency_ms": 0.7396760001938674,
           "event_count": 5
         }
       ],
-      "total_latency_ms": 4.739165002320078,
+      "total_latency_ms": 5.888405999485258,
       "invalid_transition_checks": 1,
       "final_decision": null,
       "final_session_state": "REJECTED",
       "artifact_id": null,
-      "policy_id": "policy-1773913988845-6a3523b82914",
-      "plan_id": "plan-1773913988848-28117d1310c6",
-      "session_id": "session-1773913988848-19b7de8ba51c",
+      "policy_id": "policy-1774231308203-934f832b6f5b",
+      "plan_id": "plan-1774231308206-72b69fe53eec",
+      "session_id": "session-1774231308207-77fe7eeb608e",
       "event_count": 5
     },
     {
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 0.6856750005681533,
-          "id": "policy-1773913988851-003e8555e01d"
+          "latency_ms": 0.9082310002668237,
+          "id": "policy-1774231308209-222a720a6422"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 0.7060610005282797,
+          "latency_ms": 0.8103559998744458,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 0.5932170006417437,
+          "latency_ms": 0.9545400002934912,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.6011980003677309,
-          "id": "plan-1773913988853-bbb523de487f"
+          "latency_ms": 0.775717000124132,
+          "id": "plan-1774231308212-2d5cc83ff4e7"
         },
         {
           "step": "create_session",
-          "latency_ms": 0.668188000418013,
-          "id": "session-1773913988854-a54b97ba993f",
+          "latency_ms": 0.806826999905752,
+          "id": "session-1774231308213-0fc983907e19",
           "state": "SESSION_BOUND"
         },
         {
           "step": "evaluate_without_inputs",
-          "latency_ms": 0.589889999901061,
+          "latency_ms": 1.029423000090901,
           "http_status": 400,
           "response": {
             "message": "request failed",
@@ -145,18 +145,18 @@
         },
         {
           "step": "get_audit_bundle_after_invalid_transition",
-          "latency_ms": 0.5057010002929019,
+          "latency_ms": 0.6360419997690769,
           "event_count": 5
         }
       ],
-      "total_latency_ms": 4.349930002717883,
+      "total_latency_ms": 5.921136000324623,
       "invalid_transition_checks": 1,
       "final_decision": null,
       "final_session_state": "REJECTED",
       "artifact_id": null,
-      "policy_id": "policy-1773913988851-003e8555e01d",
-      "plan_id": "plan-1773913988853-bbb523de487f",
-      "session_id": "session-1773913988854-a54b97ba993f",
+      "policy_id": "policy-1774231308209-222a720a6422",
+      "plan_id": "plan-1774231308212-2d5cc83ff4e7",
+      "session_id": "session-1774231308213-0fc983907e19",
       "event_count": 5
     }
   ]

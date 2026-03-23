@@ -23,7 +23,8 @@ func main() {
 
 	// 初始化最小依赖：内存仓库 -> 工作流服务 -> HTTP Handler -> Router。
 	store := memory.NewStore()
-	svc := workflow.NewService(store)
+	// svc := workflow.NewService(store)
+	svc := workflow.NewServiceWithEvaluator(store, workflow.NewSecureStubEvaluator())
 	h := handler.New(svc)
 	r := router.New(h)
 

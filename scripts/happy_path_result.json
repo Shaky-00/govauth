@@ -1,211 +1,391 @@
 {
   "runs": [
     {
+      "expect_mode": "secure_stub",
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 3.2267130009131506,
-          "id": "policy-1773913981388-ff2e9cb38323"
+          "latency_ms": 3.1382689999190916,
+          "id": "policy-1774231701099-32a77d775cd1"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 0.6725179991917685,
+          "latency_ms": 0.6559199996445386,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 0.9465050006838283,
+          "latency_ms": 0.6413189998966118,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.5866800001967931,
-          "id": "plan-1773913981391-1756fc7be6b1"
+          "latency_ms": 0.46671800009789877,
+          "id": "plan-1774231701101-ccd4dd13e8bb"
         },
         {
           "step": "create_session",
-          "latency_ms": 0.6964089989196509,
-          "id": "session-1773913981391-2300cb6e8d43",
+          "latency_ms": 0.4639469998437562,
+          "id": "session-1774231701102-53b9fecb1e76",
           "state": "SESSION_BOUND"
         },
         {
           "step": "admit_evidence",
-          "latency_ms": 0.5528410001716111,
-          "evidence_id": "evidence-1773913981392-c3e3188a5e0f",
+          "latency_ms": 0.475446000109514,
+          "evidence_id": "evidence-1774231701102-6995a81ad297",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "pin_snapshot",
-          "latency_ms": 0.5496459998539649,
-          "snapshot_id": "snapshot-1773913981393-16667a3ea213",
+          "latency_ms": 0.4834859996662999,
+          "snapshot_id": "snapshot-1774231701103-752463347231",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "evaluate",
-          "latency_ms": 0.5056700010754867,
-          "evaluation_id": "eval-1773913981393-15c0e224272d",
+          "latency_ms": 0.6769550000171876,
+          "evaluation_id": "eval-1774231701104-3d1cc52b47a5",
           "decision": "ALLOW",
-          "state": "DECIDED"
+          "reason": "mock_mpc verified all 4 clauses across 3 parties",
+          "evaluator_mode": "secure_stub",
+          "backend_mode": "mock_mpc",
+          "state": "DECIDED",
+          "secure_execution_id": "secure-exec-32dc060fe07b8967",
+          "secure_execution_backend_mode": "mock_mpc",
+          "proof_stub": "325b896c47471cc0439d79541512ada2012dc4e48e064f24461be35597ea7882",
+          "transcript_len": 4,
+          "steps_len": 4,
+          "secure_execution_reason": "mock_mpc verified all 4 clauses across 3 parties"
         },
         {
           "step": "seal_artifact",
-          "latency_ms": 0.5252169994491851,
-          "artifact_id": "artifact-1773913981394-887ebd433c09",
+          "latency_ms": 0.5767229999946721,
+          "artifact_id": "artifact-1774231701104-7dcf53d6a007",
           "decision": "ALLOW",
           "state": "ENFORCED"
         },
         {
           "step": "get_audit_bundle",
-          "latency_ms": 0.547601999642211,
+          "latency_ms": 0.49335999983668444,
           "event_count": 8
         }
       ],
-      "total_latency_ms": 8.80980100009765,
+      "total_latency_ms": 8.072142999026255,
       "final_decision": "ALLOW",
       "final_session_state": "ENFORCED",
-      "artifact_id": "artifact-1773913981394-887ebd433c09",
-      "policy_id": "policy-1773913981388-ff2e9cb38323",
-      "plan_id": "plan-1773913981391-1756fc7be6b1",
-      "session_id": "session-1773913981391-2300cb6e8d43",
-      "event_count": 8
+      "artifact_id": "artifact-1774231701104-7dcf53d6a007",
+      "policy_id": "policy-1774231701099-32a77d775cd1",
+      "plan_id": "plan-1774231701101-ccd4dd13e8bb",
+      "session_id": "session-1774231701102-53b9fecb1e76",
+      "event_count": 8,
+      "evaluation": {
+        "id": "eval-1774231701104-3d1cc52b47a5",
+        "decision": "ALLOW",
+        "reason": "mock_mpc verified all 4 clauses across 3 parties",
+        "evaluator_mode": "secure_stub",
+        "backend_mode": "mock_mpc",
+        "secure_execution": {
+          "execution_id": "secure-exec-32dc060fe07b8967",
+          "session_id": "session-1774231701102-53b9fecb1e76",
+          "backend_mode": "mock_mpc",
+          "decision": "ALLOW",
+          "reason": "mock_mpc verified all 4 clauses across 3 parties",
+          "proof_stub": "325b896c47471cc0439d79541512ada2012dc4e48e064f24461be35597ea7882",
+          "transcript": [
+            "mock_mpc received request=req-efbb8c06546fb5e7 session=session-1774231701102-53b9fecb1e76",
+            "mock_mpc loaded 3 parties and 4 clauses",
+            "mock_mpc produced decision=ALLOW",
+            "mock_mpc generated proof_stub=325b896c47471cc0439d79541512ada2012dc4e48e064f24461be35597ea7882"
+          ],
+          "steps": [
+            {
+              "name": "receive_party_inputs",
+              "status": "ok",
+              "detail": "received 3 party inputs"
+            },
+            {
+              "name": "assemble_secure_task",
+              "status": "ok",
+              "detail": "assembled mock secure task for plan plan-1774231701101-ccd4dd13e8bb"
+            },
+            {
+              "name": "execute_secure_computation",
+              "status": "ok",
+              "detail": "computed decision=ALLOW"
+            },
+            {
+              "name": "generate_proof_stub",
+              "status": "ok",
+              "detail": "generated deterministic mock proof stub"
+            }
+          ],
+          "metadata": {
+            "clause_count": 4,
+            "package_id": "pkd-97b0c862e8463f63",
+            "party_count": 3,
+            "total_field_count": 4
+          },
+          "executed_at": "2026-03-23T10:08:21.104151041+08:00"
+        }
+      }
     },
     {
+      "expect_mode": "secure_stub",
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 0.6128879995230818,
-          "id": "policy-1773913981395-e32863e25286"
+          "latency_ms": 0.5754059998253069,
+          "id": "policy-1774231701106-e61878c0637d"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 0.5880000007891795,
+          "latency_ms": 0.5182690001674928,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 0.5751150001742644,
+          "latency_ms": 0.5779910002274846,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.5857659998582676,
-          "id": "plan-1773913981397-ebf0e482a029"
+          "latency_ms": 0.7480670001314138,
+          "id": "plan-1774231701107-fd7da48dd1c0"
         },
         {
           "step": "create_session",
-          "latency_ms": 0.6048099985491717,
-          "id": "session-1773913981398-6df8e17d3574",
+          "latency_ms": 0.7041519997983414,
+          "id": "session-1774231701108-cfe3cec8bb61",
           "state": "SESSION_BOUND"
         },
         {
           "step": "admit_evidence",
-          "latency_ms": 0.5231019986240426,
-          "evidence_id": "evidence-1773913981399-d14d7f290dde",
+          "latency_ms": 0.5289969999466848,
+          "evidence_id": "evidence-1774231701109-bdacf367bcf7",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "pin_snapshot",
-          "latency_ms": 0.5665640001097927,
-          "snapshot_id": "snapshot-1773913981399-71ea8f63f622",
+          "latency_ms": 0.5258420001155173,
+          "snapshot_id": "snapshot-1774231701110-9ca61ca7e3eb",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "evaluate",
-          "latency_ms": 0.7281949983735103,
-          "evaluation_id": "eval-1773913981400-3f420f09682f",
+          "latency_ms": 0.6461530001615756,
+          "evaluation_id": "eval-1774231701110-d42c9393e835",
           "decision": "ALLOW",
-          "state": "DECIDED"
+          "reason": "mock_mpc verified all 4 clauses across 3 parties",
+          "evaluator_mode": "secure_stub",
+          "backend_mode": "mock_mpc",
+          "state": "DECIDED",
+          "secure_execution_id": "secure-exec-5bc42f6b3e7f14d8",
+          "secure_execution_backend_mode": "mock_mpc",
+          "proof_stub": "d16bb071d0fd46db315aab62bf15867ab89331375f27d5eceda4814d6ce0aeb9",
+          "transcript_len": 4,
+          "steps_len": 4,
+          "secure_execution_reason": "mock_mpc verified all 4 clauses across 3 parties"
         },
         {
           "step": "seal_artifact",
-          "latency_ms": 0.7398230009130202,
-          "artifact_id": "artifact-1773913981401-a371a32e8222",
+          "latency_ms": 0.5397220002123504,
+          "artifact_id": "artifact-1774231701111-ea873a23e99a",
           "decision": "ALLOW",
           "state": "ENFORCED"
         },
         {
           "step": "get_audit_bundle",
-          "latency_ms": 0.7923079992906423,
+          "latency_ms": 0.591657999848394,
           "event_count": 8
         }
       ],
-      "total_latency_ms": 6.316570996204973,
+      "total_latency_ms": 5.956257000434562,
       "final_decision": "ALLOW",
       "final_session_state": "ENFORCED",
-      "artifact_id": "artifact-1773913981401-a371a32e8222",
-      "policy_id": "policy-1773913981395-e32863e25286",
-      "plan_id": "plan-1773913981397-ebf0e482a029",
-      "session_id": "session-1773913981398-6df8e17d3574",
-      "event_count": 8
+      "artifact_id": "artifact-1774231701111-ea873a23e99a",
+      "policy_id": "policy-1774231701106-e61878c0637d",
+      "plan_id": "plan-1774231701107-fd7da48dd1c0",
+      "session_id": "session-1774231701108-cfe3cec8bb61",
+      "event_count": 8,
+      "evaluation": {
+        "id": "eval-1774231701110-d42c9393e835",
+        "decision": "ALLOW",
+        "reason": "mock_mpc verified all 4 clauses across 3 parties",
+        "evaluator_mode": "secure_stub",
+        "backend_mode": "mock_mpc",
+        "secure_execution": {
+          "execution_id": "secure-exec-5bc42f6b3e7f14d8",
+          "session_id": "session-1774231701108-cfe3cec8bb61",
+          "backend_mode": "mock_mpc",
+          "decision": "ALLOW",
+          "reason": "mock_mpc verified all 4 clauses across 3 parties",
+          "proof_stub": "d16bb071d0fd46db315aab62bf15867ab89331375f27d5eceda4814d6ce0aeb9",
+          "transcript": [
+            "mock_mpc received request=req-90c2099b007ab109 session=session-1774231701108-cfe3cec8bb61",
+            "mock_mpc loaded 3 parties and 4 clauses",
+            "mock_mpc produced decision=ALLOW",
+            "mock_mpc generated proof_stub=d16bb071d0fd46db315aab62bf15867ab89331375f27d5eceda4814d6ce0aeb9"
+          ],
+          "steps": [
+            {
+              "name": "receive_party_inputs",
+              "status": "ok",
+              "detail": "received 3 party inputs"
+            },
+            {
+              "name": "assemble_secure_task",
+              "status": "ok",
+              "detail": "assembled mock secure task for plan plan-1774231701107-fd7da48dd1c0"
+            },
+            {
+              "name": "execute_secure_computation",
+              "status": "ok",
+              "detail": "computed decision=ALLOW"
+            },
+            {
+              "name": "generate_proof_stub",
+              "status": "ok",
+              "detail": "generated deterministic mock proof stub"
+            }
+          ],
+          "metadata": {
+            "clause_count": 4,
+            "package_id": "pkd-f3ff2b485c008545",
+            "party_count": 3,
+            "total_field_count": 4
+          },
+          "executed_at": "2026-03-23T10:08:21.110743157+08:00"
+        }
+      }
     },
     {
+      "expect_mode": "secure_stub",
       "steps": [
         {
           "step": "create_policy",
-          "latency_ms": 0.7757599996693898,
-          "id": "policy-1773913981403-e4bc900ce824"
+          "latency_ms": 0.5445639999379637,
+          "id": "policy-1774231701112-9cc4fb9a690b"
         },
         {
           "step": "admit_policy",
-          "latency_ms": 0.7702469993091654,
+          "latency_ms": 0.6236109998098982,
           "status": "ADMISSIBLE"
         },
         {
           "step": "publish_policy",
-          "latency_ms": 0.7242499996209517,
+          "latency_ms": 0.5185470004107628,
           "status": "PUBLISHED"
         },
         {
           "step": "derive_plan",
-          "latency_ms": 0.5299949989421293,
-          "id": "plan-1773913981405-6f9ca2b934d1"
+          "latency_ms": 0.45743400005449075,
+          "id": "plan-1774231701114-2b70af890381"
         },
         {
           "step": "create_session",
-          "latency_ms": 0.6326940001599723,
-          "id": "session-1773913981405-dff5b714d206",
+          "latency_ms": 0.47879200019451673,
+          "id": "session-1774231701115-63764f9d4982",
           "state": "SESSION_BOUND"
         },
         {
           "step": "admit_evidence",
-          "latency_ms": 0.5567759999394184,
-          "evidence_id": "evidence-1773913981406-181f64f1b9f5",
+          "latency_ms": 0.604337999902782,
+          "evidence_id": "evidence-1774231701115-46c0a7c14525",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "pin_snapshot",
-          "latency_ms": 0.6669689992122585,
-          "snapshot_id": "snapshot-1773913981407-34ef6e5f6464",
+          "latency_ms": 0.5140990001564205,
+          "snapshot_id": "snapshot-1774231701116-a56b0f2fdab3",
           "state": "EVIDENCE_BOUND"
         },
         {
           "step": "evaluate",
-          "latency_ms": 0.6735250008205185,
-          "evaluation_id": "eval-1773913981408-84b6480fe659",
+          "latency_ms": 0.5346069997358427,
+          "evaluation_id": "eval-1774231701116-eee902161fd1",
           "decision": "ALLOW",
-          "state": "DECIDED"
+          "reason": "mock_mpc verified all 4 clauses across 3 parties",
+          "evaluator_mode": "secure_stub",
+          "backend_mode": "mock_mpc",
+          "state": "DECIDED",
+          "secure_execution_id": "secure-exec-3c19ad4c296b8154",
+          "secure_execution_backend_mode": "mock_mpc",
+          "proof_stub": "f53202a29b615aa8aca30196a0d15b48cf09bad6218ff0cf9b4624ff4ce5e201",
+          "transcript_len": 4,
+          "steps_len": 4,
+          "secure_execution_reason": "mock_mpc verified all 4 clauses across 3 parties"
         },
         {
           "step": "seal_artifact",
-          "latency_ms": 0.904041999092442,
-          "artifact_id": "artifact-1773913981408-73acdbebed82",
+          "latency_ms": 0.55766900004528,
+          "artifact_id": "artifact-1774231701117-1ab96ef9744e",
           "decision": "ALLOW",
           "state": "ENFORCED"
         },
         {
           "step": "get_audit_bundle",
-          "latency_ms": 0.6549879999511177,
+          "latency_ms": 0.8317229999192932,
           "event_count": 8
         }
       ],
-      "total_latency_ms": 6.889245996717364,
+      "total_latency_ms": 5.665384000167251,
       "final_decision": "ALLOW",
       "final_session_state": "ENFORCED",
-      "artifact_id": "artifact-1773913981408-73acdbebed82",
-      "policy_id": "policy-1773913981403-e4bc900ce824",
-      "plan_id": "plan-1773913981405-6f9ca2b934d1",
-      "session_id": "session-1773913981405-dff5b714d206",
-      "event_count": 8
+      "artifact_id": "artifact-1774231701117-1ab96ef9744e",
+      "policy_id": "policy-1774231701112-9cc4fb9a690b",
+      "plan_id": "plan-1774231701114-2b70af890381",
+      "session_id": "session-1774231701115-63764f9d4982",
+      "event_count": 8,
+      "evaluation": {
+        "id": "eval-1774231701116-eee902161fd1",
+        "decision": "ALLOW",
+        "reason": "mock_mpc verified all 4 clauses across 3 parties",
+        "evaluator_mode": "secure_stub",
+        "backend_mode": "mock_mpc",
+        "secure_execution": {
+          "execution_id": "secure-exec-3c19ad4c296b8154",
+          "session_id": "session-1774231701115-63764f9d4982",
+          "backend_mode": "mock_mpc",
+          "decision": "ALLOW",
+          "reason": "mock_mpc verified all 4 clauses across 3 parties",
+          "proof_stub": "f53202a29b615aa8aca30196a0d15b48cf09bad6218ff0cf9b4624ff4ce5e201",
+          "transcript": [
+            "mock_mpc received request=req-7cfb6cbce8874561 session=session-1774231701115-63764f9d4982",
+            "mock_mpc loaded 3 parties and 4 clauses",
+            "mock_mpc produced decision=ALLOW",
+            "mock_mpc generated proof_stub=f53202a29b615aa8aca30196a0d15b48cf09bad6218ff0cf9b4624ff4ce5e201"
+          ],
+          "steps": [
+            {
+              "name": "receive_party_inputs",
+              "status": "ok",
+              "detail": "received 3 party inputs"
+            },
+            {
+              "name": "assemble_secure_task",
+              "status": "ok",
+              "detail": "assembled mock secure task for plan plan-1774231701114-2b70af890381"
+            },
+            {
+              "name": "execute_secure_computation",
+              "status": "ok",
+              "detail": "computed decision=ALLOW"
+            },
+            {
+              "name": "generate_proof_stub",
+              "status": "ok",
+              "detail": "generated deterministic mock proof stub"
+            }
+          ],
+          "metadata": {
+            "clause_count": 4,
+            "package_id": "pkd-29d47eb07cbbc9c4",
+            "party_count": 3,
+            "total_field_count": 4
+          },
+          "executed_at": "2026-03-23T10:08:21.116896142+08:00"
+        }
+      }
     }
   ]
 }

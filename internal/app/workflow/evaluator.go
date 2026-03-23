@@ -3,6 +3,7 @@ package workflow
 import (
 	"fmt"
 	"govauth/internal/domain/model"
+	"govauth/internal/pkg/hash"
 	"strings"
 	"time"
 )
@@ -31,20 +32,8 @@ func (e *PlainEvaluator) Mode() string {
 }
 
 func (e *PlainEvaluator) Evaluate(in EvaluationInput) (*model.EvaluationResult, error) {
-	if in.Plan == nil {
-		return nil, fmt.Errorf("evaluation input missing plan")
-	}
-	if in.Evidence == nil {
-		return nil, fmt.Errorf("evaluation input missing evidence")
-	}
-	if in.Snapshot == nil {
-		return nil, fmt.Errorf("evaluation input missing snapshot")
-	}
-	if in.Session == nil {
-		return nil, fmt.Errorf("evaluation input missing session")
-	}
-	if len(in.Plan.Clauses) == 0 {
-		return nil, fmt.Errorf("plan clauses missing")
+	if err := validateEvaluationInput(in); err != nil {
+		return nil, err
 	}
 
 	decision, reasons := evaluateClauses(in.Plan.Clauses, in.Evidence, in.Snapshot, in.Session)
@@ -58,8 +47,170 @@ func (e *PlainEvaluator) Evaluate(in EvaluationInput) (*model.EvaluationResult, 
 		Decision:      decision,
 		Reason:        strings.Join(reasons, "; "),
 		EvaluatorMode: e.Mode(),
+		BackendMode:   model.SecureBackendModeLocalPlain,
 		EvaluatedAt:   time.Now(),
 	}, nil
+}
+
+// SecureOrchestratingEvaluator 正式的安全执行编排器
+// 主要负责：
+// 1. build secure input package
+// 2. assemble secure execution request
+// 3. call secure backend
+// 4. map backend result to evaluation result
+type SecureOrchestratingEvaluator struct {
+	mode    string
+	backend SecureBackend
+}
+
+func NewSecureOrchestratingEvalutor(backend SecureBackend) *SecureOrchestratingEvaluator {
+	if backend == nil {
+		backend = NewMockMPCBackend()
+	}
+	return &SecureOrchestratingEvaluator{
+		mode:    model.EvaluatorModeSecureOrchestrating,
+		backend: backend,
+	}
+}
+
+// 兼容 Secure_stub
+
+// SecureStubEvaluator: 按照owner拆分输入，构造多方输入视图，先本地模拟安全求值、
+// type SecureStubEvaluator struct{}
+
+func NewSecureStubEvaluator() *SecureOrchestratingEvaluator {
+	return &SecureOrchestratingEvaluator{
+		mode:    model.EvaluatorModeSecureStub,
+		backend: NewMockMPCBackend(),
+	}
+}
+
+func (e *SecureOrchestratingEvaluator) Mode() string {
+	return model.EvaluatorModeSecureStub
+}
+
+func (e *SecureOrchestratingEvaluator) Evaluate(in EvaluationInput) (*model.EvaluationResult, error) {
+	if err := validateEvaluationInput(in); err != nil {
+		return nil, err
+	}
+	if e.backend == nil {
+		return nil, fmt.Errorf("secure orchestrating evaluator missing backend")
+	}
+
+	pkg, err := buildSecureInputPackage(in)
+	if err != nil {
+		return nil, err
+	}
+
+	req := assembleSecureExecutionRequest(in, e.mode, e.backend.Mode(), pkg)
+
+	secureResult, err := e.backend.Execute(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return mapSecureExecutionToEvaluationResult(in, e.mode, secureResult), nil
+}
+
+func buildSecureInputPackage(in EvaluationInput) (*model.SecureInputPackage, error) {
+	partyView := buildSecurePartyView(in)
+	parties := make([]model.SecurePartyInput, 0, len(partyView))
+	totalFieldCount := 0
+
+	for _, owner := range []string{
+		model.ClauseOwnerRequester,
+		model.ClauseOwnerProvider,
+		model.ClauseOwnerAuthority,
+	} {
+		sourceView := partyView[owner]
+		if sourceView == nil {
+			sourceView = map[string]map[string]any{}
+		}
+
+		parties = append(parties, model.SecurePartyInput{
+			Party:  owner,
+			Inputs: sourceView,
+			Meta: map[string]any{
+				"field_count": countSecureFields(sourceView),
+			},
+		})
+		totalFieldCount += countSecureFields(sourceView)
+	}
+
+	return &model.SecureInputPackage{
+		PackageID: "pkd-" + hash.AnySHA256Hex(map[string]any{
+			"session_id":  in.Session.ID,
+			"plan_id":     in.Plan.ID,
+			"built_at":    time.Now().UnixNano(),
+			"party_count": len(parties),
+		})[:16],
+		SessionID:       in.Session.ID,
+		PolicyID:        in.Session.PolicyID,
+		PlanID:          in.Session.PlanID,
+		Parties:         parties,
+		ClauseCount:     len(in.Plan.Clauses),
+		TotalFieldCount: totalFieldCount,
+		BuiltAt:         time.Now(),
+	}, nil
+}
+
+func assembleSecureExecutionRequest(
+	in EvaluationInput,
+	evaluatorMode string,
+	backendMode string,
+	pkg *model.SecureInputPackage,
+) *model.SecureExecutionRequest {
+	return &model.SecureExecutionRequest{
+		RequestID: "req-" + hash.AnySHA256Hex(map[string]any{
+			"session_id":     in.Session.ID,
+			"plan_id":        in.Plan.ID,
+			"evaluator_mode": evaluatorMode,
+			"backend_mode":   backendMode,
+			"time":           time.Now().UnixNano(),
+		})[:16],
+		SessionID:     in.Session.ID,
+		PolicyID:      in.Session.PolicyID,
+		PlanID:        in.Plan.ID,
+		EvaluatorMode: evaluatorMode,
+		BackendMode:   backendMode,
+		Clauses:       in.Plan.Clauses,
+		InputPackage:  pkg,
+		ExecutionHints: map[string]any{
+			"resource_id":              in.Session.ResourceID,
+			"release_binding_required": in.Plan.ReleaseBindingRequired,
+			"canonical_policy":         in.Plan.ExecutionHints["canonical_policy"],
+			"clause_count":             len(in.Plan.Clauses),
+		},
+		RequestedAt: time.Now(),
+	}
+}
+
+func mapSecureExecutionToEvaluationResult(
+	in EvaluationInput,
+	evaluatorMode string,
+	secureResult *model.SecureExecutionResult,
+) *model.EvaluationResult {
+	reason := ""
+	backendMode := ""
+	evaluatedAt := time.Now()
+
+	if secureResult != nil {
+		reason = secureResult.Reason
+		backendMode = secureResult.BackendMode
+		if !secureResult.ExecutedAt.IsZero() {
+			evaluatedAt = secureResult.ExecutedAt
+		}
+	}
+
+	return &model.EvaluationResult{
+		SessionID:       in.Session.ID,
+		Decision:        secureResult.Decision,
+		Reason:          reason,
+		EvaluatorMode:   evaluatorMode,
+		BackendMode:     backendMode,
+		SecureExecution: secureResult,
+		EvaluatedAt:     evaluatedAt,
+	}
 }
 
 // 最小可运行 clause evaluator
@@ -75,18 +226,10 @@ func evaluateClauses(
 	for _, clause := range clauses {
 		expected := toString(clause.Value)
 
-		var actual string
-		switch clause.Source {
-		case model.ClauseSourceEvidence:
-			actual = toString(evidence.AdmittedView[clause.Field])
-		case model.ClauseSourceSnapshot:
-			actual = toString(snapshot.Payload[clause.Field])
-		case model.ClauseSourceContext:
-			actual = toString(session.Context[clause.Field])
-
-		default:
+		actual, err := resolveClauseActualValue(clause, evidence, snapshot, session)
+		if err != nil {
 			decision = model.DecisionDeny
-			reasons = append(reasons, fmt.Sprintf("unknown source %s", clause.Source))
+			reasons = append(reasons, err.Error())
 			continue
 		}
 
@@ -103,6 +246,90 @@ func evaluateClauses(
 	}
 
 	return decision, reasons
+}
+
+// 校验统一输入
+func validateEvaluationInput(in EvaluationInput) error {
+	if in.Plan == nil {
+		return fmt.Errorf("evaluation input missing plan")
+	}
+	if in.Evidence == nil {
+		return fmt.Errorf("evaluation input missing evidence")
+	}
+	if in.Snapshot == nil {
+		return fmt.Errorf("evaluation input missing snapshot")
+	}
+	if in.Session == nil {
+		return fmt.Errorf("evaluation input missing session")
+	}
+	if len(in.Plan.Clauses) == 0 {
+		return fmt.Errorf("plan clauses missing")
+	}
+	return nil
+}
+
+// 根据clause的source从对应视图取值
+func resolveClauseActualValue(
+	clause model.Clause,
+	evidence *model.EvidenceRecord,
+	snapshot *model.PinnedSnapshot,
+	session *model.ExecutionSession,
+) (string, error) {
+	switch clause.Source {
+	case model.ClauseSourceEvidence:
+		return toString(evidence.AdmittedView[clause.Field]), nil
+	case model.ClauseSourceSnapshot:
+		return toString(snapshot.Payload[clause.Field]), nil
+	case model.ClauseSourceContext:
+		return toString(session.Context[clause.Field]), nil
+	default:
+		return "", fmt.Errorf("unknown source %s", clause.Source)
+	}
+}
+
+// 构造secure stub的多方输入视图
+// 结构含义：owner -> source -> field -> value
+func buildSecurePartyView(in EvaluationInput) map[string]map[string]map[string]any {
+	view := map[string]map[string]map[string]any{
+		model.ClauseOwnerRequester: {},
+		model.ClauseOwnerProvider:  {},
+		model.ClauseOwnerAuthority: {},
+	}
+
+	for _, clause := range in.Plan.Clauses {
+		owner := strings.TrimSpace(clause.Owner)
+		source := strings.TrimSpace(clause.Source)
+		field := strings.TrimSpace(clause.Field)
+
+		if owner == "" || source == "" || field == "" {
+			continue
+		}
+
+		if _, ok := view[owner]; !ok {
+			view[owner] = map[string]map[string]any{}
+		}
+		if _, ok := view[owner][source]; !ok {
+			view[owner][source] = map[string]any{}
+		}
+
+		actual, err := resolveClauseActualValue(clause, in.Evidence, in.Snapshot, in.Session)
+		if err != nil {
+			continue
+		}
+
+		view[owner][source][field] = actual
+	}
+
+	return view
+}
+
+// 统计某个owner视图下总共装了多少个字段，便于输出调试信息
+func countSecureFields(ownerView map[string]map[string]any) int {
+	total := 0
+	for _, sourceView := range ownerView {
+		total += len(sourceView)
+	}
+	return total
 }
 
 func toString(v any) string {

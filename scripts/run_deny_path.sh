@@ -6,11 +6,18 @@ set -euo pipefail
 # 2. 等待 /healthz 可访问；
 # 3. 执行 deny path 测试脚本；
 # 4. 结束后自动关闭服务。
+#
+# 可通过环境变量控制：
+# - BASE_URL: 服务地址，默认 http://localhost:8080
+# - ROUNDS:   执行轮数，默认 3
+# - EXPECT_MODE: 期望 evaluator 模式，默认 plain
+#                可选 plain / secure_stub / secure_orchestrating
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_FILE="$ROOT_DIR/scripts/server.log"
 BASE_URL="${BASE_URL:-http://localhost:8080}"
 ROUNDS="${ROUNDS:-3}"
+EXPECT_MODE="${EXPECT_MODE:-plain}"
 
 cleanup() {
   if [[ -n "${SERVER_PID:-}" ]]; then
@@ -26,11 +33,15 @@ SERVER_PID=$!
 
 echo "govauth server started with PID=$SERVER_PID"
 echo "waiting for $BASE_URL/healthz ..."
+echo "deny path expect mode: $EXPECT_MODE"
 
 for _ in $(seq 1 30); do
   if curl -s "$BASE_URL/healthz" >/dev/null 2>&1; then
     echo "server is ready"
-    python3 "$ROOT_DIR/scripts/deny_path_runner.py" --base-url "$BASE_URL" --rounds "$ROUNDS"
+    python3 "$ROOT_DIR/scripts/deny_path_runner.py" \
+      --base-url "$BASE_URL" \
+      --rounds "$ROUNDS" \
+      --expect-mode "$EXPECT_MODE"
     exit 0
   fi
   sleep 1

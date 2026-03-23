@@ -19,9 +19,48 @@ type Service struct {
 
 // 创建工作流服务
 func NewService(store *memory.Store) *Service {
+	return NewServiceWithEvaluator(store, nil) // 默认 plain Evaluator
+}
+
+func NewServiceWithEvaluator(store *memory.Store, evaluator Evaluator) *Service {
+	if evaluator == nil {
+		evaluator = NewPlainEvaluator()
+	}
+
 	return &Service{
 		store:     store,
-		evaluator: NewPlainEvaluator(),
+		evaluator: evaluator,
+	}
+}
+
+// 运行时切换Evaluator
+func (s *Service) SetEvaluator(evaluator Evaluator) {
+	if evaluator == nil {
+		s.evaluator = NewPlainEvaluator()
+		return
+	}
+	s.evaluator = evaluator
+}
+
+// 返回当前Evaluator模式
+func (s *Service) CurrentEvaluatorMode() string {
+	if s == nil || s.evaluator == nil {
+		return model.EvaluatorModePlain
+	}
+	return s.evaluator.Mode()
+}
+
+// 根据mode创建Evaluator，便于测试脚本或注入配置
+func NewEvaluatorByMode(mode string) (Evaluator, error) {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "", model.EvaluatorModePlain:
+		return NewPlainEvaluator(), nil
+	case model.EvaluatorModeSecureStub:
+		return NewSecureStubEvaluator(), nil
+	case model.EvaluatorModeSecureOrchestrating:
+		return NewSecureOrchestratingEvalutor(NewMockMPCBackend()), nil
+	default:
+		return nil, fmt.Errorf("unknown evaluator mode: %s", mode)
 	}
 }
 
@@ -377,21 +416,6 @@ func (s *Service) Evaluate(sessionID string) (*model.EvaluationResult, *model.Ex
 	if err != nil {
 		return nil, session, s.rejectSession(session, "T4_DECISION", fmt.Errorf("bound snapshot missing: %w", err), nil)
 	}
-
-	// decision, reasons := evaluateClauses(plan.Clauses, evidence, snapshot, session)
-
-	// if len(reasons) == 0 {
-	// 	reasons = append(reasons, fmt.Sprintf("plan %s verified all clauses successfully", plan.ID))
-	// }
-
-	// result := &model.EvaluationResult{
-	// 	ID:            id.New("eval"),
-	// 	SessionID:     session.ID,
-	// 	Decision:      decision,
-	// 	Reason:        strings.Join(reasons, "; "),
-	// 	EvaluatorMode: model.EvaluatorModePlain,
-	// 	EvaluatedAt:   time.Now(),
-	// }
 
 	result, err := s.evaluator.Evaluate(EvaluationInput{
 		Plan:     plan,

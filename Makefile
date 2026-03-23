@@ -14,11 +14,11 @@ test:
 
 # Happy Path 测试
 happy:
-	bash ./scripts/run_happy_path.sh
+	EXPECT_MODE=secure_stub bash ./scripts/run_happy_path.sh
 
 # Deny Path 测试
 deny:
-	bash ./scripts/run_deny_path.sh
+	EXPECT_MODE=secure_stub bash ./scripts/run_deny_path.sh	
 
 # Invalid Transition 测试
 invalid:

@@ -52,8 +52,15 @@ const (
 
 // Evaluator 模式常量
 const (
-	EvaluatorModePlain      = "plain"
-	EvaluatorModeSecureStub = "secure_stub"
+	EvaluatorModePlain               = "plain"
+	EvaluatorModeSecureStub          = "secure_stub"
+	EvaluatorModeSecureOrchestrating = "secure_orchestrating" // 新的正式模式名
+)
+
+// Secure backend 模式常量
+const (
+	SecureBackendModeLocalPlain = "local_plain"
+	SecureBackendModeMockMPC    = "mock_mpc"
 )
 
 type Clause struct {
@@ -68,10 +75,6 @@ type Clause struct {
 type PolicyContent struct {
 	Clauses []Clause `json:"clauses"`
 
-	// RequiredRole           string `json:"required_role"`
-	// RequiredDepartment     string `json:"required_department"`
-	// RequiredPurpose        string `json:"required_purpose"`
-	// RequiredResourceStatus string `json:"required_resource_status"`
 	Description string `json:"description"`
 }
 
@@ -141,14 +144,71 @@ type PinnedSnapshot struct {
 	PinnedAt       time.Time      `json:"pinned_at"`
 }
 
+// --------- 新增：MPC-orioented 核心模型
+// Input 的结构：source -> field -> value
+type SecurePartyInput struct {
+	Party  string                    `json:"party"`
+	Inputs map[string]map[string]any `json:"inputs"`
+	Meta   map[string]any            `json:"meta,omitempty"`
+}
+
+// 一次安全计算任务所需的完整多方输入包
+type SecureInputPackage struct {
+	PackageID       string             `json:"package_id"`
+	SessionID       string             `json:"session_id"`
+	PolicyID        string             `json:"policy_id"`
+	PlanID          string             `json:"plan_id"`
+	Parties         []SecurePartyInput `json:"parties"`
+	ClauseCount     int                `json:"clause_count"`
+	TotalFieldCount int                `json:"total_field_count"`
+	BuiltAt         time.Time          `json:"built_at"`
+}
+
+// 发给 SecureBackend 的正式执行请求
+type SecureExecutionRequest struct {
+	RequestID      string              `json:"request_id"`
+	SessionID      string              `json:"session_id"`
+	PolicyID       string              `json:"policy_id"`
+	PlanID         string              `json:"plan_id"`
+	EvaluatorMode  string              `json:"evaluator_mode"`
+	BackendMode    string              `json:"backend_mode"`
+	Clauses        []Clause            `json:"clauses"`
+	InputPackage   *SecureInputPackage `json:"input_package"`
+	ExecutionHints map[string]any      `json:"execution_hints,omitempty"`
+	RequestedAt    time.Time           `json:"requested_at"`
+}
+
+// 安全执行过程中的步骤记录
+type SecureExecutionStep struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Detail string `json:"detail,omitempty"`
+}
+
+// SecureBackend 返回的结构化执行结果
+type SecureExecutionResult struct {
+	ExecutionID string                `json:"execution_id"`
+	SessionID   string                `json:"session_id"`
+	BackendMode string                `json:"backend_mode"`
+	Decision    Decision              `json:"decision"`
+	Reason      string                `json:"reason"`
+	ProofStub   string                `json:"proof_stub,omitempty"`
+	Transcript  []string              `json:"transcript,omitempty"`
+	Steps       []SecureExecutionStep `json:"steps,omitempty"`
+	Metadata    map[string]any        `json:"metadata,omitempty"`
+	ExecutedAt  time.Time             `json:"executed_at"`
+}
+
 // 执行评估结果
 type EvaluationResult struct {
-	ID            string    `json:"id"`
-	SessionID     string    `json:"session_id"`
-	Decision      Decision  `json:"decision"`
-	Reason        string    `json:"reason"`
-	EvaluatorMode string    `json:"evaluator_mode"`
-	EvaluatedAt   time.Time `json:"evaluated_at"`
+	ID              string                 `json:"id"`
+	SessionID       string                 `json:"session_id"`
+	Decision        Decision               `json:"decision"`
+	Reason          string                 `json:"reason"`
+	EvaluatorMode   string                 `json:"evaluator_mode"`
+	BackendMode     string                 `json:"backend_mode,omitempty"`
+	SecureExecution *SecureExecutionResult `json:"secure_execution,omitempty"`
+	EvaluatedAt     time.Time              `json:"evaluated_at"`
 }
 
 // 最终授权工件
