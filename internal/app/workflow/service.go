@@ -19,7 +19,7 @@ type Service struct {
 
 // 创建工作流服务
 func NewService(store *memory.Store) *Service {
-	return NewServiceWithEvaluator(store, nil) // 默认 plain Evaluator
+	return NewServiceWithEvaluator(store, nil)
 }
 
 func NewServiceWithEvaluator(store *memory.Store, evaluator Evaluator) *Service {
@@ -50,15 +50,31 @@ func (s *Service) CurrentEvaluatorMode() string {
 	return s.evaluator.Mode()
 }
 
-// 根据mode创建Evaluator，便于测试脚本或注入配置
+// NewEvaluatorByMode 保留旧接口，兼容你原来的调用方式。
+// 若只给 mode，不给 backend，则 secure_orchestrating 默认走 mock_mpc，
+// 这样旧脚本不会一下子全部失效。
 func NewEvaluatorByMode(mode string) (Evaluator, error) {
+	return NewEvaluatorByModeAndBackend(mode, "")
+}
+
+// NewEvaluatorByModeAndBackend 是新的推荐入口。
+// 它的意义是：你可以独立切换 evaluator mode 和 secure backend mode。
+func NewEvaluatorByModeAndBackend(mode string, backendMode string) (Evaluator, error) {
 	switch strings.ToLower(strings.TrimSpace(mode)) {
 	case "", model.EvaluatorModePlain:
 		return NewPlainEvaluator(), nil
+
 	case model.EvaluatorModeSecureStub:
+		// secure_stub 固定继续走 mock 后端，便于和真实 MPC 对照。
 		return NewSecureStubEvaluator(), nil
+
 	case model.EvaluatorModeSecureOrchestrating:
-		return NewSecureOrchestratingEvaluator(NewMockMPCBackend()), nil
+		backend, err := NewSecureBackendByMode(backendMode)
+		if err != nil {
+			return nil, err
+		}
+		return NewSecureOrchestratingEvaluator(backend), nil
+
 	default:
 		return nil, fmt.Errorf("unknown evaluator mode: %s", mode)
 	}

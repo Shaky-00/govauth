@@ -1,26 +1,58 @@
-.PHONY: run tidy test happy deny invalid all
+.PHONY: run tidy test flow-test flow-quick flow-real-only
 
-# 启动服务
+# 手动启动服务（默认给 real_mpc，便于你单独调接口）
 run:
 	EVALUATOR_MODE=secure_orchestrating SECURE_BACKEND_MODE=real_mpc go run ./cmd/server
 
-# 清理依赖
+# 依赖整理
 tidy:
 	go mod tidy
 
-# Go 单元测试
+# Go 单测
 test:
-	go test ./...	
+	go test ./...
 
-happy:
-	EXPECT_MODE=secure_orchestrating EXPECT_BACKEND=real_mpc bash ./scripts/run_happy_path.sh
+# 一键全量测试：
+# plain + mock + real
+# happy + deny
+# 每组默认 1 轮，尽量减少重复运行
+flow-test:
+	MPC_PYTHON_BIN=python3 \
+	MPC_SCRIPT_PATH=tools/mpc/mpyc_eq_backend.py \
+	MPC_BASE_PORT=11500 \
+	MPC_TIMEOUT_SEC=30 \
+	MPC_KEEP_ARTIFACTS=false \
+	python3 ./scripts/policy_flow_matrix.py \
+	  --modes plain,mock,real \
+	  --scenarios happy,deny \
+	  --rounds 1 \
+	  --output scripts/policy_flow_matrix_result.json \
+	  --log-dir scripts/logs
 
-deny:
-	EXPECT_MODE=secure_orchestrating EXPECT_BACKEND=real_mpc bash ./scripts/run_deny_path.sh
+# 快速版：只测 plain + mock
+flow-quick:
+	MPC_PYTHON_BIN=python3 \
+	MPC_SCRIPT_PATH=tools/mpc/mpyc_eq_backend.py \
+	MPC_BASE_PORT=11500 \
+	MPC_TIMEOUT_SEC=30 \
+	MPC_KEEP_ARTIFACTS=false \
+	python3 ./scripts/policy_flow_matrix.py \
+	  --modes plain,mock \
+	  --scenarios happy,deny \
+	  --rounds 1 \
+	  --output scripts/policy_flow_quick_result.json \
+	  --log-dir scripts/logs
 
-# Invalid Transition 测试
-invalid:
-	bash ./scripts/run_invalid_transition.sh
-
-# 一次性跑全部流程测试
-all: happy deny invalid
+# 只测 real_mpc
+flow-real-only:
+	MPC_PYTHON_BIN=python3 \
+	MPC_SCRIPT_PATH=tools/mpc/mpyc_eq_backend.py \
+	MPC_BASE_PORT=11500 \
+	MPC_TIMEOUT_SEC=30 \
+	MPC_KEEP_ARTIFACTS=false \
+	python3 ./scripts/policy_flow_matrix.py \
+	  --modes real \
+	  --scenarios happy,deny \
+	  --rounds 1 \
+	  --output scripts/policy_flow_real_result.json \
+	  --log-dir scripts/logs

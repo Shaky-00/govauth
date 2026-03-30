@@ -47,7 +47,12 @@ const (
 
 // Clause 的 op 常量
 const (
-	ClauseOpEq = "eq"
+	ClauseOpEq  = "eq"
+	ClauseOpNeq = "neq"
+	ClauseOpGt  = "gt"
+	ClauseOpGte = "gte"
+	ClauseOpLt  = "lt"
+	ClauseOpLte = "lte"
 )
 
 // Evaluator 模式常量

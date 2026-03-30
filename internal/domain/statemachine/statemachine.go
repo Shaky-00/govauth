@@ -43,7 +43,7 @@ func ValidatePolicyAdmission(p *model.Policy) error {
 		}
 
 		switch strings.ToLower(strings.TrimSpace(clause.Op)) {
-		case model.ClauseOpEq:
+		case model.ClauseOpEq, model.ClauseOpNeq, model.ClauseOpGt, model.ClauseOpGte, model.ClauseOpLt, model.ClauseOpLte:
 		default:
 			return fmt.Errorf("clause[%d] op %q is unsupported", i, clause.Op)
 		}

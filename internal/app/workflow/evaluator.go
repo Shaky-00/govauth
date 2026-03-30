@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"govauth/internal/domain/model"
 	"govauth/internal/pkg/hash"
+	"math"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -115,6 +117,7 @@ func (e *SecureOrchestratingEvaluator) Evaluate(in EvaluationInput) (*model.Eval
 	return mapSecureExecutionToEvaluationResult(in, e.mode, secureResult), nil
 }
 
+// Warning：当前GovAuth能够看到多party的输入
 func buildSecureInputPackage(in EvaluationInput) (*model.SecureInputPackage, error) {
 	partyView := buildSecurePartyView(in)
 	parties := make([]model.SecurePartyInput, 0, len(partyView))
@@ -127,9 +130,11 @@ func buildSecureInputPackage(in EvaluationInput) (*model.SecureInputPackage, err
 	}
 
 	partyCount := len(orderedOwners)
-	threshold := 2
-	if threshold > partyCount {
-		threshold = partyCount
+	threshold := 1
+	if partyCount >= 3 {
+		// MPyC 的经典半诚实门限通常要求 t < m/2。
+		// 在 3 方时，t=1 是自然选择。
+		threshold = 1
 	}
 
 	for _, owner := range orderedOwners {
@@ -140,7 +145,6 @@ func buildSecureInputPackage(in EvaluationInput) (*model.SecureInputPackage, err
 
 		encodedInputs := encodeSecureInputs(owner, sourceView, partyCount)
 		shareMap := flattenEncodedInputMap(encodedInputs)
-
 		fieldCount := countSecureFields(sourceView)
 
 		parties = append(parties, model.SecurePartyInput{
@@ -260,15 +264,30 @@ func evaluateClauses(
 			continue
 		}
 
-		switch clause.Op {
-		case model.ClauseOpEq:
-			if !strings.EqualFold(actual, expected) {
-				decision = model.DecisionDeny
-				reasons = append(reasons, fmt.Sprintf("%s.%s mismatch (owner=%s)", clause.Source, clause.Field, clause.Owner))
-			}
-		default:
+		// switch clause.Op {
+		// case model.ClauseOpEq:
+		// 	if !strings.EqualFold(actual, expected) {
+		// 		decision = model.DecisionDeny
+		// 		reasons = append(reasons, fmt.Sprintf("%s.%s mismatch (owner=%s)", clause.Source, clause.Field, clause.Owner))
+		// 	}
+		// default:
+		// 	decision = model.DecisionDeny
+		// 	reasons = append(reasons, fmt.Sprintf("unsupported op %s", clause.Op))
+		// }
+		ok, cmpErr := compareClauseValues(clause.Op, actual, expected)
+		if cmpErr != nil {
 			decision = model.DecisionDeny
-			reasons = append(reasons, fmt.Sprintf("unsupported op %s", clause.Op))
+			reasons = append(reasons,
+				fmt.Sprintf("invalid clause at %s.%s (owner=%s, op=%s): %v",
+					clause.Source, clause.Field, clause.Owner, clause.Op, cmpErr))
+			continue
+		}
+
+		if !ok {
+			decision = model.DecisionDeny
+			reasons = append(reasons,
+				fmt.Sprintf("%s.%s mismatch (owner=%s, op=%s, actual=%s, expected=%s)",
+					clause.Source, clause.Field, clause.Owner, clause.Op, actual, expected))
 		}
 	}
 
@@ -364,4 +383,67 @@ func toString(v any) string {
 		return ""
 	}
 	return fmt.Sprintf("%v", v)
+}
+
+// compareClauseValues
+// 规则：
+// 1. eq / neq 支持字符串大小写无关比较；
+// 2. gt / gte / lt / lte 仅支持整数语义；
+// 3. 若比较类操作碰到非整数值，则返回错误。
+func compareClauseValues(op string, actual string, expected string) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(op)) {
+	case model.ClauseOpEq:
+		return strings.EqualFold(actual, expected), nil
+	case model.ClauseOpNeq:
+		return !strings.EqualFold(actual, expected), nil
+	case model.ClauseOpGt, model.ClauseOpGte, model.ClauseOpLt, model.ClauseOpLte:
+		actualInt, err := parseIntegerString(actual)
+		if err != nil {
+			return false, fmt.Errorf("actual value %q is not an integer", actual)
+		}
+
+		expectedInt, err := parseIntegerString(expected)
+		if err != nil {
+			return false, fmt.Errorf("expected value %q is not an integer", expected)
+		}
+
+		switch strings.ToLower(strings.TrimSpace(op)) {
+		case model.ClauseOpGt:
+			return actualInt > expectedInt, nil
+		case model.ClauseOpGte:
+			return actualInt >= expectedInt, nil
+		case model.ClauseOpLt:
+			return actualInt < expectedInt, nil
+		case model.ClauseOpLte:
+			return actualInt <= expectedInt, nil
+		}
+	}
+
+	return false, fmt.Errorf("unsupported op %s", op)
+}
+
+func parseIntegerString(raw string) (int64, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return 0, fmt.Errorf("empty numeric value")
+	}
+
+	if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+		return n, nil
+	}
+
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, fmt.Errorf("cannot parse integer from %q", raw)
+	}
+
+	if math.Trunc(f) != f {
+		return 0, fmt.Errorf("non-integer numeric value %q", raw)
+	}
+
+	if f > math.MaxInt64 || f < math.MinInt64 {
+		return 0, fmt.Errorf("integer out of int64 range: %q", raw)
+	}
+
+	return int64(f), nil
 }

@@ -1,12 +1,19 @@
 package workflow
 
 import (
-	"encoding/hex"
+	"context"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"govauth/internal/domain/model"
 	"govauth/internal/pkg/hash"
-	"sort"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -14,6 +21,19 @@ import (
 type SecureBackend interface {
 	Mode() string
 	Execute(req *model.SecureExecutionRequest) (*model.SecureExecutionResult, error)
+}
+
+// NewSecureBackendByMode 统一创建 backend。
+// 这样 service/main 层不需要知道 backend 的具体类型。
+func NewSecureBackendByMode(mode string) (SecureBackend, error) {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "", model.SecureBackendModeMockMPC:
+		return NewMockMPCBackend(), nil
+	case model.SecureBackendModeRealMPC:
+		return NewRealMPCBackend(), nil
+	default:
+		return nil, fmt.Errorf("unknown secure backend mode: %s", mode)
+	}
 }
 
 // ------------------------------------------------------------
@@ -77,16 +97,20 @@ func (b *MockMPCBackend) Execute(req *model.SecureExecutionRequest) (*model.Secu
 			continue
 		}
 
-		switch clause.Op {
-		case model.ClauseOpEq:
-			if !strings.EqualFold(actual, expected) {
-				decision = model.DecisionDeny
-				reasons = append(reasons,
-					fmt.Sprintf("mock_mpc mismatch at owner=%s source=%s field=%s", clause.Owner, clause.Source, clause.Field))
-			}
-		default:
+		passed, err := compareClauseValues(clause.Op, actual, expected)
+		if err != nil {
 			decision = model.DecisionDeny
-			reasons = append(reasons, fmt.Sprintf("mock_mpc unsupported op %s", clause.Op))
+			reasons = append(reasons,
+				fmt.Sprintf("mock_mpc invalid clause at owner=%s source=%s field=%s op=%s: %v",
+					clause.Owner, clause.Source, clause.Field, clause.Op, err))
+			continue
+		}
+
+		if !passed {
+			decision = model.DecisionDeny
+			reasons = append(reasons,
+				fmt.Sprintf("mock_mpc mismatch at owner=%s source=%s field=%s op=%s actual=%s expected=%s",
+					clause.Owner, clause.Source, clause.Field, clause.Op, actual, expected))
 		}
 	}
 
@@ -139,6 +163,14 @@ func (b *MockMPCBackend) Execute(req *model.SecureExecutionRequest) (*model.Secu
 			"clause_count":      len(req.Clauses),
 			"total_field_count": req.InputPackage.TotalFieldCount,
 			"package_id":        req.InputPackage.PackageID,
+			"supported_ops": []string{
+				model.ClauseOpEq,
+				model.ClauseOpNeq,
+				model.ClauseOpGt,
+				model.ClauseOpGte,
+				model.ClauseOpLt,
+				model.ClauseOpLte,
+			},
 		},
 		ExecutedAt: time.Now(),
 	}, nil
@@ -148,23 +180,36 @@ func (b *MockMPCBackend) Execute(req *model.SecureExecutionRequest) (*model.Secu
 // RealMPCBackend
 // ------------------------------------------------------------
 
-// RealMPCBackend 是“最小可运行的伪 MPC backend”。
-// 它不是密码学 MPC 实现，但它具备：
-// 1. 输入装载阶段
-// 2. secret sharing 模拟阶段
-// 3. secure evaluation 阶段
-// 4. reconstruct 阶段
-// 5. proof / transcript 生成阶段
-//
-// 未来如果接 SPDZ / ABY / TEE / 远端 MPC runtime，
-// 主要替换的就是这个 backend 的内部执行细节。
+// 新的初级Backend，不再伪装安全计算，而是：
+// 1. 由 Go 侧编排任务；
+// 2. 写出公共 task 文件和各 party 私有输入文件；
+// 3. 拉起多个 MPyC party 进程；
+// 4. 等待 MPC 输出最终决策；
+// 5. 把结果映射回 GovAuth 的 SecureExecutionResult。
+
+// 这不是工业级分布式 MPC 编排器，
+// 但它已经是真实的多进程、多方输入、秘密共享、联合计算。
 type RealMPCBackend struct {
-	defaultThreshold int
+	pythonBin      string
+	scriptPath     string
+	basePort       int
+	partyCount     int
+	timeout        time.Duration
+	keepArtifacts  bool
+	bitLength      int
+	commandWorkDir string
 }
 
 func NewRealMPCBackend() *RealMPCBackend {
 	return &RealMPCBackend{
-		defaultThreshold: 2,
+		pythonBin:      getenvDefault("MPC_PYTHON_BIN", "python3"),
+		scriptPath:     getenvDefault("MPC_SCRIPT_PATH", "tools/mpc/mpyc_eq_backend.py"),
+		basePort:       getenvIntDefault("MPC_BASE_PORT", 11500),
+		partyCount:     3,
+		timeout:        time.Duration(getenvIntDefault("MPC_TIMEOUT_SEC", 30)) * time.Second,
+		keepArtifacts:  getenvBoolDefault("MPC_KEEP_ARTIFACTS", false),
+		bitLength:      61,
+		commandWorkDir: getenvDefault("MPC_WORK_DIR", ""),
 	}
 }
 
@@ -182,429 +227,531 @@ func (b *RealMPCBackend) Execute(req *model.SecureExecutionRequest) (*model.Secu
 	if len(req.Clauses) == 0 {
 		return nil, fmt.Errorf("secure execution request missing clauses")
 	}
-
-	now := time.Now()
-	pkg := b.ensureShareRepresentation(req.InputPackage)
-
-	transcript := make([]string, 0, 16)
-	steps := make([]model.SecureExecutionStep, 0, 5)
-
-	// --------------------------------------------------------
-	// Step 1: load party inputs
-	// 这是 MPC 抽象中的输入接收/载入阶段
-	// --------------------------------------------------------
-	transcript = append(transcript,
-		fmt.Sprintf("real_mpc receive request=%s session=%s", req.RequestID, req.SessionID),
-		fmt.Sprintf("real_mpc load package=%s parties=%d clauses=%d", pkg.PackageID, len(pkg.Parties), len(req.Clauses)),
-	)
-	steps = append(steps, model.SecureExecutionStep{
-		Name:   "receive_inputs",
-		Status: "ok",
-		Detail: fmt.Sprintf("loaded secure package %s with %d parties", pkg.PackageID, len(pkg.Parties)),
-	})
-
-	// --------------------------------------------------------
-	// Step 2: simulate secret sharing
-	// 这里是 mock/模拟逻辑，不是真实秘密分享协议
-	// 但结构上明确区分“原始输入”和“共享表示”
-	// --------------------------------------------------------
-	transcript = append(transcript,
-		fmt.Sprintf("real_mpc simulate secret sharing party_count=%d threshold=%d", pkg.PartyCount, pkg.Threshold),
-	)
-	steps = append(steps, model.SecureExecutionStep{
-		Name:   "secret_sharing",
-		Status: "ok",
-		Detail: fmt.Sprintf("prepared pseudo shares for %d parties with threshold=%d", pkg.PartyCount, pkg.Threshold),
-	})
-
-	// --------------------------------------------------------
-	// Step 3: secure evaluation
-	// 不直接使用原始 value，而是：
-	// 1. 从 share 表示取出 shares
-	// 2. 做伪 reconstruction
-	// 3. 在“secure context”里比较
-	// --------------------------------------------------------
-	decision, reasons, evalTrace := b.secureEvaluateClauses(req.Clauses, pkg)
-	transcript = append(transcript, "real_mpc start secure clause evaluation")
-	transcript = append(transcript, evalTrace...)
-	steps = append(steps, model.SecureExecutionStep{
-		Name:   "secure_evaluation",
-		Status: "ok",
-		Detail: fmt.Sprintf("evaluated %d clauses in pseudo secure context", len(req.Clauses)),
-	})
-
-	// --------------------------------------------------------
-	// Step 4: reconstruct result
-	// 这里对应 MPC 输出重构阶段
-	// --------------------------------------------------------
-	finalReason := strings.Join(reasons, "; ")
-	if len(reasons) == 0 {
-		finalReason = fmt.Sprintf("real_mpc verified all %d clauses across %d parties", len(req.Clauses), pkg.PartyCount)
+	if b.partyCount != 3 {
+		return nil, fmt.Errorf("real_mpc backend currently requires exactly 3 parties")
 	}
-	transcript = append(transcript, fmt.Sprintf("real_mpc reconstruct final decision=%s", decision))
-	steps = append(steps, model.SecureExecutionStep{
-		Name:   "reconstruct",
-		Status: "ok",
-		Detail: fmt.Sprintf("reconstructed final decision=%s", decision),
-	})
 
-	// --------------------------------------------------------
-	// Step 5: generate proof stub + transcript
-	// proof_stub 依旧是模拟逻辑，但预留真实证明/执行证明的位置
-	// --------------------------------------------------------
+	startAt := time.Now()
+
+	taskDoc, partyDocs, err := b.buildMPYCTask(req)
+	if err != nil {
+		return nil, err
+	}
+
+	workDir, cleanup, err := b.prepareWorkDir()
+	if cleanup != nil {
+		defer cleanup()
+	}
+
+	taskPath := filepath.Join(workDir, "task.json")
+	if err := writeJSONFile(taskPath, taskDoc); err != nil {
+		return nil, err
+	}
+
+	inputPaths := make(map[string]string)
+	tracePaths := make(map[string]string)
+	stderrByParty := make(map[string]string)
+
+	partyOrder := []string{
+		model.ClauseOwnerRequester,
+		model.ClauseOwnerProvider,
+		model.ClauseOwnerAuthority,
+	}
+
+	for _, role := range partyOrder {
+		inputPath := filepath.Join(workDir, role+"_input.json")
+		tracePath := filepath.Join(workDir, role+"_trace.log")
+
+		if err := writeJSONFile(inputPath, partyDocs[role]); err != nil {
+			return nil, err
+		}
+
+		inputPaths[role] = inputPath
+		tracePaths[role] = tracePath
+	}
+
+	resultPath := filepath.Join(workDir, "result.json")
+
+	ctx, cancel := context.WithTimeout(context.Background(), b.timeout)
+	defer cancel()
+
+	type partyExecResult struct {
+		role   string
+		stderr string
+		err    error
+	}
+
+	resultCh := make(chan partyExecResult, len(partyOrder))
+	var wg sync.WaitGroup
+
+	for idx, role := range partyOrder {
+		wg.Add(1)
+
+		go func(partyIndex int, partyRole string) {
+			defer wg.Done()
+
+			stderr, runErr := b.runOneParty(ctx, partyIndex, partyRole, taskPath, inputPaths[partyRole], resultPath, tracePaths[partyRole])
+			resultCh <- partyExecResult{
+				role:   partyRole,
+				stderr: stderr,
+				err:    runErr,
+			}
+		}(idx, role)
+	}
+
+	wg.Wait()
+	close(resultCh)
+
+	for item := range resultCh {
+		stderrByParty[item.role] = item.stderr
+		if item.err != nil {
+			return nil, fmt.Errorf("real_mpc party %s failed: %w; stderr=%s", item.role, item.err, item.stderr)
+		}
+	}
+
+	resultDoc := &mpycResultDocument{}
+	if err := readJSONFile(resultPath, resultDoc); err != nil {
+		return nil, fmt.Errorf("real_mpc result file missing or invalid: %w", err)
+	}
+
+	transcript := make([]string, 0, 32)
+	transcript = append(transcript,
+		fmt.Sprintf("real_mpc request=%s session=%s", req.RequestID, req.SessionID),
+		fmt.Sprintf("real_mpc workdir=%s", workDir),
+		fmt.Sprintf("real_mpc launched %d MPyC parties", len(partyOrder)),
+	)
+	transcript = append(transcript, resultDoc.Transcript...)
+
+	// 把各party的本地trace也并进去
+	// 这样在 audit bundle 里就能非常直观看到：
+	// requester/provider/authority 是分别启动的、分别输入的。
+	for _, role := range partyOrder {
+		content, _ := os.ReadFile(tracePaths[role])
+		if len(content) > 0 {
+			transcript = append(transcript,
+				fmt.Sprintf("party_trace[%s]=BEGIN", role),
+				strings.TrimSpace(string(content)),
+				fmt.Sprintf("party_trace[%s]=END", role),
+			)
+		}
+	}
+
+	steps := []model.SecureExecutionStep{
+		{
+			Name:   "prepare_party_inputs",
+			Status: "ok",
+			Detail: fmt.Sprintf("prepared task.json and %d party input files", len(partyOrder)),
+		},
+		{
+			Name:   "launch_mpyc_parties",
+			Status: "ok",
+			Detail: fmt.Sprintf("launched %d local MPyC processes", len(partyOrder)),
+		},
+		{
+			Name:   "secure_evaluation",
+			Status: "ok",
+			Detail: fmt.Sprintf("finished MPyC secure equality evaluation for %d clauses", len(req.Clauses)),
+		},
+		{
+			Name:   "collect_result",
+			Status: "ok",
+			Detail: fmt.Sprintf("decision=%s", resultDoc.Decision),
+		},
+	}
+
+	decision := model.DecisionDeny
+	switch strings.ToUpper(strings.TrimSpace(resultDoc.Decision)) {
+	case string(model.DecisionAllow):
+		decision = model.DecisionAllow
+	case string(model.DecisionDeny):
+		decision = model.DecisionDeny
+	}
+
+	reasons := make([]string, 0)
+	for _, c := range resultDoc.ClauseResults {
+		if !c.Passed {
+			reasons = append(reasons,
+				fmt.Sprintf("real_mpc mismatch at owner=%s source=%s field=%s", c.Owner, c.Source, c.Field))
+		}
+	}
+	if len(reasons) == 0 {
+		reasons = append(reasons,
+			fmt.Sprintf("real_mpc verified all %d clauses across %d parties", len(req.Clauses), len(partyOrder)))
+	}
+
 	proofStub := hash.AnySHA256Hex(map[string]any{
 		"request_id":   req.RequestID,
 		"session_id":   req.SessionID,
 		"plan_id":      req.PlanID,
 		"backend_mode": b.Mode(),
 		"decision":     decision,
-		"package_id":   pkg.PackageID,
-		"party_count":  pkg.PartyCount,
-		"threshold":    pkg.Threshold,
-		"clauses":      req.Clauses,
-	})
-	transcript = append(transcript, fmt.Sprintf("real_mpc generate proof_stub=%s", proofStub))
-	steps = append(steps, model.SecureExecutionStep{
-		Name:   "generate_proof",
-		Status: "ok",
-		Detail: "generated pseudo MPC proof stub",
+		"package_id":   req.InputPackage.PackageID,
+		"party_count":  len(partyOrder),
+		"base_port":    b.basePort,
+		"clause_count": len(req.Clauses),
 	})
 
 	return &model.SecureExecutionResult{
 		ExecutionID: "secure-exec-" + hash.AnySHA256Hex(map[string]any{
 			"request_id": req.RequestID,
-			"executed":   now.UnixNano(),
+			"executed":   startAt.UnixNano(),
 			"backend":    b.Mode(),
 		})[:16],
 		SessionID:   req.SessionID,
 		BackendMode: b.Mode(),
 		Decision:    decision,
-		Reason:      finalReason,
+		Reason:      strings.Join(reasons, "; "),
 		ProofStub:   proofStub,
 		Transcript:  transcript,
 		Steps:       steps,
 		Metadata: map[string]any{
-			"package_id":        pkg.PackageID,
-			"party_count":       pkg.PartyCount,
-			"threshold":         pkg.Threshold,
+			"package_id":        req.InputPackage.PackageID,
+			"party_count":       len(partyOrder),
 			"clause_count":      len(req.Clauses),
-			"total_field_count": pkg.TotalFieldCount,
-			"share_ready":       true,
+			"total_field_count": req.InputPackage.TotalFieldCount,
+			"mpc_runtime":       "mpyc",
+			"bit_length":        b.bitLength,
+			"base_port":         b.basePort,
+			"work_dir":          workDir,
+			"party_stderr":      stderrByParty,
+			"supported_ops": []string{
+				model.ClauseOpEq,
+				model.ClauseOpNeq,
+				model.ClauseOpGt,
+				model.ClauseOpGte,
+				model.ClauseOpLt,
+				model.ClauseOpLte,
+			},
 		},
-		ExecutedAt: now,
+		ExecutedAt: time.Now(),
 	}, nil
 }
 
-// secureEvaluateClauses 在“伪 secure context”中对 clauses 求值。
-// 这里仍然是本地逻辑，但求值使用的是 shares -> reconstruct -> compare 的流程。
-// 这就是 MPC 抽象；不是密码学安全。
-func (b *RealMPCBackend) secureEvaluateClauses(
-	clauses []model.Clause,
-	pkg *model.SecureInputPackage,
-) (model.Decision, []string, []string) {
-	decision := model.DecisionAllow
-	reasons := make([]string, 0)
-	trace := make([]string, 0, len(clauses))
+// runOneParty 启动一个本地 MPyC party 进程。
+// 这里故意让每个 party 都是独立进程，避免继续停留在“函数内模拟多方”的层面。
+func (b *RealMPCBackend) runOneParty(
+	ctx context.Context,
+	partyIndex int,
+	role string,
+	taskPath string,
+	inputPath string,
+	resultPath string,
+	tracePath string,
+) (string, error) {
+	scriptPath := b.scriptPath
+	if !filepath.IsAbs(scriptPath) && b.commandWorkDir != "" {
+		scriptPath = filepath.Join(b.commandWorkDir, scriptPath)
+	}
 
-	for _, clause := range clauses {
+	args := []string{
+		scriptPath,
+		"-M", strconv.Itoa(b.partyCount),
+		"-I", strconv.Itoa(partyIndex),
+		"-B", strconv.Itoa(b.basePort),
+		"--no-log",
+	}
+
+	cmd := exec.CommandContext(ctx, b.pythonBin, args...)
+
+	if b.commandWorkDir != "" {
+		cmd.Dir = b.commandWorkDir
+	}
+
+	// 自定义参数不走 argv，避免和 MPyC 自带参数解析发生冲突。
+	cmd.Env = append(os.Environ(),
+		"GOVAUTH_MPC_TASK="+taskPath,
+		"GOVAUTH_MPC_INPUT="+inputPath,
+		"GOVAUTH_MPC_RESULT="+resultPath,
+		"GOVAUTH_MPC_TRACE="+tracePath,
+		"GOVAUTH_MPC_ROLE="+role,
+	)
+
+	output, err := cmd.CombinedOutput()
+	return string(output), err
+}
+
+func (b *RealMPCBackend) prepareWorkDir() (string, func(), error) {
+	baseDir := ""
+	if strings.TrimSpace(b.commandWorkDir) != "" {
+		baseDir = b.commandWorkDir
+	}
+
+	workDir, err := os.MkdirTemp(baseDir, "govauth-mpyc-*")
+	if err != nil {
+		return "", nil, err
+	}
+
+	cleanup := func() {
+		if b.keepArtifacts {
+			return
+		}
+		_ = os.RemoveAll(workDir)
+	}
+
+	return workDir, cleanup, nil
+}
+
+// buildMPYCTask 把 SecureExecutionRequest 转成：
+// 1. 公共 task 文档
+// 2. 每个 party 的私有输入文档
+//
+// 这一步是本次接入里最关键的“桥接层”：
+// 它把 GovAuth 的 clause 模型，变成了 MPyC 能直接消费的最小 MPC 任务。
+func (b *RealMPCBackend) buildMPYCTask(req *model.SecureExecutionRequest) (*mpycTaskDocument, map[string]*mpycPartyInputDocument, error) {
+	partyOrder := []string{
+		model.ClauseOwnerRequester,
+		model.ClauseOwnerProvider,
+		model.ClauseOwnerAuthority,
+	}
+	partyIndexMap := map[string]int{
+		model.ClauseOwnerRequester: 0,
+		model.ClauseOwnerProvider:  1,
+		model.ClauseOwnerAuthority: 2,
+	}
+
+	task := &mpycTaskDocument{
+		RequestID:   req.RequestID,
+		SessionID:   req.SessionID,
+		PlanID:      req.PlanID,
+		PartyOrder:  partyOrder,
+		PartyCount:  len(partyOrder),
+		BitLength:   b.bitLength,
+		ClauseCount: len(req.Clauses),
+		Clauses:     make([]mpycClauseDocument, 0, len(req.Clauses)),
+	}
+
+	partyDocs := map[string]*mpycPartyInputDocument{
+		model.ClauseOwnerRequester: {
+			Role:       model.ClauseOwnerRequester,
+			PartyIndex: 0,
+			Inputs:     make([]int64, len(req.Clauses)),
+		},
+		model.ClauseOwnerProvider: {
+			Role:       model.ClauseOwnerProvider,
+			PartyIndex: 1,
+			Inputs:     make([]int64, len(req.Clauses)),
+		},
+		model.ClauseOwnerAuthority: {
+			Role:       model.ClauseOwnerAuthority,
+			PartyIndex: 2,
+			Inputs:     make([]int64, len(req.Clauses)),
+		},
+	}
+
+	for i, clause := range req.Clauses {
+		op := strings.ToLower(strings.TrimSpace(clause.Op))
+		switch op {
+		case model.ClauseOpEq, model.ClauseOpNeq, model.ClauseOpGt, model.ClauseOpGte, model.ClauseOpLt, model.ClauseOpLte:
+			// 当前支持的最小可用操作集
+		default:
+			return nil, nil, fmt.Errorf("real_mpc backend unsupported op %s", clause.Op)
+		}
+
+		owner := strings.ToLower(strings.TrimSpace(clause.Owner))
+		ownerIndex, ok := partyIndexMap[owner]
+		if !ok {
+			return nil, nil, fmt.Errorf("real_mpc unsupported owner %s", clause.Owner)
+		}
+
+		actual, ok := resolveSecureActualValue(req.InputPackage, clause)
+		if !ok {
+			return nil, nil, fmt.Errorf("real_mpc missing actual value for owner=%s source=%s field=%s", clause.Owner, clause.Source, clause.Field)
+		}
+
 		expected := toString(clause.Value)
 
-		shares, ok := resolveSharesForClause(pkg, clause)
-		if !ok {
-			decision = model.DecisionDeny
-			reasons = append(reasons,
-				fmt.Sprintf("real_mpc missing shares at owner=%s source=%s field=%s", clause.Owner, clause.Source, clause.Field))
-			trace = append(trace,
-				fmt.Sprintf("real_mpc clause owner=%s source=%s field=%s -> missing shares", clause.Owner, clause.Source, clause.Field))
-			continue
-		}
-
-		// 这里的 reconstruct 是 mock/模拟逻辑：
-		// 它把本地 shares 拼回原始值，表示“安全计算输出重构前的内部恢复”。
-		actual, err := reconstructValueFromShares(shares)
+		expectedEncoded, comparisonMode, err := encodeClauseValueForMPC(op, expected)
 		if err != nil {
-			decision = model.DecisionDeny
-			reasons = append(reasons,
-				fmt.Sprintf("real_mpc failed to reconstruct owner=%s source=%s field=%s", clause.Owner, clause.Source, clause.Field))
-			trace = append(trace,
-				fmt.Sprintf("real_mpc reconstruct failed owner=%s source=%s field=%s err=%v", clause.Owner, clause.Source, clause.Field, err))
-			continue
+			return nil, nil, fmt.Errorf("real_mpc expected value encode failed at owner=%s source=%s field=%s op=%s: %w",
+				clause.Owner, clause.Source, clause.Field, clause.Op, err)
 		}
 
-		switch clause.Op {
-		case model.ClauseOpEq:
-			if !strings.EqualFold(actual, expected) {
-				decision = model.DecisionDeny
-				reasons = append(reasons,
-					fmt.Sprintf("real_mpc mismatch at owner=%s source=%s field=%s", clause.Owner, clause.Source, clause.Field))
-				trace = append(trace,
-					fmt.Sprintf("real_mpc secure compare failed owner=%s source=%s field=%s actual=%s expected=%s",
-						clause.Owner, clause.Source, clause.Field, actual, expected))
-			} else {
-				trace = append(trace,
-					fmt.Sprintf("real_mpc secure compare passed owner=%s source=%s field=%s",
-						clause.Owner, clause.Source, clause.Field))
-			}
-		default:
-			decision = model.DecisionDeny
-			reasons = append(reasons, fmt.Sprintf("real_mpc unsupported op %s", clause.Op))
-			trace = append(trace, fmt.Sprintf("real_mpc unsupported op=%s", clause.Op))
-		}
-	}
-
-	return decision, reasons, trace
-}
-
-// ensureShareRepresentation 确保输入包中有 shares。
-// 如果上游没有生成，就在 backend 内兜底生成。
-func (b *RealMPCBackend) ensureShareRepresentation(pkg *model.SecureInputPackage) *model.SecureInputPackage {
-	if pkg == nil {
-		return nil
-	}
-
-	if pkg.PartyCount <= 0 {
-		pkg.PartyCount = len(pkg.Parties)
-	}
-	if pkg.Threshold <= 0 {
-		if b.defaultThreshold > 0 && b.defaultThreshold <= pkg.PartyCount {
-			pkg.Threshold = b.defaultThreshold
-		} else {
-			pkg.Threshold = pkg.PartyCount
-		}
-	}
-
-	for i := range pkg.Parties {
-		party := &pkg.Parties[i]
-
-		if party.EncodedInputs == nil {
-			party.EncodedInputs = encodeSecureInputs(party.Party, party.Inputs, pkg.PartyCount)
-		}
-		if party.ShareMap == nil {
-			party.ShareMap = flattenEncodedInputMap(party.EncodedInputs)
-		}
-		if party.Meta == nil {
-			party.Meta = map[string]any{}
-		}
-		party.Meta["share_ready"] = true
-		party.Meta["share_count"] = len(party.ShareMap)
-		party.Meta["threshold"] = pkg.Threshold
-	}
-
-	return pkg
-}
-
-// ------------------------------------------------------------
-// Share 编码 / 解码辅助逻辑
-// ------------------------------------------------------------
-
-// encodeSecureInputs 将原始输入编码为 shares。
-// 这是 mock/模拟逻辑，不是真实 MPC secret sharing。
-// 这里的思路是：
-// 1. 先把值转成 hex 字符串
-// 2. 再拆成固定数量的 share 片段
-// 3. 后续 reconstruct 时再拼回
-func encodeSecureInputs(
-	party string,
-	inputs map[string]map[string]any,
-	partyCount int,
-) map[string]map[string][]string {
-	out := make(map[string]map[string][]string)
-
-	sourceKeys := make([]string, 0, len(inputs))
-	for source := range inputs {
-		sourceKeys = append(sourceKeys, source)
-	}
-	sort.Strings(sourceKeys)
-
-	for _, source := range sourceKeys {
-		if out[source] == nil {
-			out[source] = map[string][]string{}
-		}
-
-		fieldKeys := make([]string, 0, len(inputs[source]))
-		for field := range inputs[source] {
-			fieldKeys = append(fieldKeys, field)
-		}
-		sort.Strings(fieldKeys)
-
-		for _, field := range fieldKeys {
-			raw := toString(inputs[source][field])
-			out[source][field] = makePseudoShares(party, source, field, raw, partyCount)
-		}
-	}
-
-	return out
-}
-
-// makePseudoShares 生成伪 shares。
-// 注意：这里只是“结构上像秘密分享”，不是密码学安全。
-// 每个 share 形如：
-// share|party|source|field|idx|total|chunk
-func makePseudoShares(
-	party string,
-	source string,
-	field string,
-	value string,
-	shareCount int,
-) []string {
-	if shareCount <= 0 {
-		shareCount = 1
-	}
-
-	hexValue := hex.EncodeToString([]byte(value))
-	chunks := splitStringEvenly(hexValue, shareCount)
-
-	shares := make([]string, 0, shareCount)
-	for i, chunk := range chunks {
-		shares = append(shares, fmt.Sprintf(
-			"share|%s|%s|%s|%d|%d|%s",
-			party, source, field, i, shareCount, chunk,
-		))
-	}
-	return shares
-}
-
-// splitStringEvenly 将字符串尽量均匀地拆成 n 段。
-func splitStringEvenly(s string, n int) []string {
-	if n <= 1 {
-		return []string{s}
-	}
-	if s == "" {
-		out := make([]string, n)
-		for i := 0; i < n; i++ {
-			out[i] = ""
-		}
-		return out
-	}
-
-	out := make([]string, 0, n)
-	base := len(s) / n
-	rem := len(s) % n
-
-	start := 0
-	for i := 0; i < n; i++ {
-		size := base
-		if i < rem {
-			size++
-		}
-		end := start + size
-		if end > len(s) {
-			end = len(s)
-		}
-		out = append(out, s[start:end])
-		start = end
-	}
-
-	return out
-}
-
-// reconstructValueFromShares 将 shares 拼回原始值。
-// 这一步是“伪 reconstruct”，模拟 MPC 最后的恢复阶段。
-func reconstructValueFromShares(shares []string) (string, error) {
-	if len(shares) == 0 {
-		return "", fmt.Errorf("empty shares")
-	}
-
-	type sharePiece struct {
-		Index int
-		Total int
-		Chunk string
-	}
-
-	pieces := make([]sharePiece, 0, len(shares))
-	for _, share := range shares {
-		part := strings.SplitN(share, "|", 7)
-		if len(part) != 7 {
-			return "", fmt.Errorf("invalid share format")
-		}
-
-		var idx int
-		var total int
-		_, err := fmt.Sscanf(part[4], "%d", &idx)
+		actualEncoded, actualMode, err := encodeClauseValueForMPC(op, actual)
 		if err != nil {
-			return "", fmt.Errorf("invalid share index")
-		}
-		_, err = fmt.Sscanf(part[5], "%d", &total)
-		if err != nil {
-			return "", fmt.Errorf("invalid share total")
+			return nil, nil, fmt.Errorf("real_mpc actual value encode failed at owner=%s source=%s field=%s op=%s: %w",
+				clause.Owner, clause.Source, clause.Field, clause.Op, err)
 		}
 
-		pieces = append(pieces, sharePiece{
-			Index: idx,
-			Total: total,
-			Chunk: part[6],
+		if actualMode != comparisonMode {
+			return nil, nil, fmt.Errorf("real_mpc comparison mode mismatch at owner=%s source=%s field=%s op=%s",
+				clause.Owner, clause.Source, clause.Field, clause.Op)
+		}
+
+		task.Clauses = append(task.Clauses, mpycClauseDocument{
+			ClauseID:         fmt.Sprintf("clause_%d", i),
+			Owner:            owner,
+			OwnerIndex:       ownerIndex,
+			Source:           clause.Source,
+			Field:            clause.Field,
+			Op:               op,
+			ComparisonMode:   comparisonMode,
+			ExpectedValue:    expectedEncoded,
+			ExpectedReadable: expected,
 		})
+
+		// 只有 owner 对应的 party 文档里，才放真实输入值。
+		// 其他 party 保持 0。
+		partyDocs[owner].Inputs[i] = actualEncoded
 	}
 
-	sort.Slice(pieces, func(i, j int) bool {
-		return pieces[i].Index < pieces[j].Index
-	})
+	return task, partyDocs, nil
+}
 
-	var builder strings.Builder
-	for _, p := range pieces {
-		builder.WriteString(p.Chunk)
+// ------------------------------------------------------------
+// MPyC 文档模型
+// ------------------------------------------------------------
+
+type mpycTaskDocument struct {
+	RequestID   string               `json:"request_id"`
+	SessionID   string               `json:"session_id"`
+	PlanID      string               `json:"plan_id"`
+	PartyOrder  []string             `json:"party_order"`
+	PartyCount  int                  `json:"party_count"`
+	BitLength   int                  `json:"bit_length"`
+	ClauseCount int                  `json:"clause_count"`
+	Clauses     []mpycClauseDocument `json:"clauses"`
+}
+
+type mpycClauseDocument struct {
+	ClauseID         string `json:"clause_id"`
+	Owner            string `json:"owner"`
+	OwnerIndex       int    `json:"owner_index"`
+	Source           string `json:"source"`
+	Field            string `json:"field"`
+	Op               string `json:"op"`
+	ComparisonMode   string `json:"comparison_mode"`
+	ExpectedValue    int64  `json:"expected_value"`
+	ExpectedReadable string `json:"expected_readable,omitempty"`
+}
+
+type mpycPartyInputDocument struct {
+	Role       string  `json:"role"`
+	PartyIndex int     `json:"party_index"`
+	Inputs     []int64 `json:"inputs"`
+}
+
+type mpycResultDocument struct {
+	RequestID     string                     `json:"request_id"`
+	SessionID     string                     `json:"session_id"`
+	Decision      string                     `json:"decision"`
+	ClauseResults []mpycClauseResultDocument `json:"clause_results"`
+	Transcript    []string                   `json:"transcript"`
+}
+
+type mpycClauseResultDocument struct {
+	ClauseID string `json:"clause_id"`
+	Owner    string `json:"owner"`
+	Source   string `json:"source"`
+	Field    string `json:"field"`
+	Op       string `json:"op"`
+	Passed   bool   `json:"passed"`
+}
+
+// ------------------------------------------------------------
+// 共享辅助函数
+// ------------------------------------------------------------
+
+const (
+	mpcComparisonModeEqHash     = "eq_hash"
+	mpcComparisonModeIntCompare = "int_compare"
+)
+
+// encodeClauseValueForMPC 根据op选择编码方式
+// 1. eq / neq：允许字符串，统一做哈希编码；
+// 2. gt / gte / lt / lte：仅允许整数，直接保留整数语义。
+func encodeClauseValueForMPC(op string, raw string) (int64, string, error) {
+	switch strings.ToLower(strings.TrimSpace(op)) {
+	case model.ClauseOpEq, model.ClauseOpNeq:
+		return encodeStringForMPCEq(raw), mpcComparisonModeEqHash, nil
+
+	case model.ClauseOpGt, model.ClauseOpGte, model.ClauseOpLt, model.ClauseOpLte:
+		n, err := parseIntegerString(raw)
+		if err != nil {
+			return 0, "", err
+		}
+		if err := validateMPCIntRange(n); err != nil {
+			return 0, "", err
+		}
+		return n, mpcComparisonModeIntCompare, nil
 	}
+	return 0, "", fmt.Errorf("unsupported op %s", op)
+}
 
-	rawHex := builder.String()
-	if rawHex == "" {
-		return "", nil
+func encodeStringForMPCEq(v string) int64 {
+	sum := sha256.Sum256([]byte(v))
+	x := binary.BigEndian.Uint64(sum[:8])
+
+	x &= (1 << 61) - 1
+
+	if x == 0 {
+		x = 1
 	}
+	return int64(x)
+}
 
-	data, err := hex.DecodeString(rawHex)
+func validateMPCIntRange(v int64) error {
+	const maxSigned61 = int64(1<<60) - 1
+	const minSigned61 = -1 << 60
+
+	if v < minSigned61 || v > maxSigned61 {
+		return fmt.Errorf("integer %d out of signed-61-bit range", v)
+	}
+	return nil
+}
+
+func writeJSONFile(path string, v any) error {
+	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return "", err
+		return err
 	}
-	return string(data), nil
+	return os.WriteFile(path, data, 0o644)
 }
 
-// flattenEncodedInputMap 将结构化 shares 扁平化。
-func flattenEncodedInputMap(encoded map[string]map[string][]string) map[string][]string {
-	out := make(map[string][]string)
-	for source, fieldMap := range encoded {
-		for field, shares := range fieldMap {
-			out[buildShareKey(source, field)] = shares
-		}
+func readJSONFile(path string, out any) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
 	}
-	return out
+	return json.Unmarshal(data, out)
 }
 
-func buildShareKey(source string, field string) string {
-	return strings.TrimSpace(source) + "." + strings.TrimSpace(field)
+func getenvDefault(key string, fallback string) string {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return fallback
+	}
+	return v
 }
 
-// resolveSharesForClause 按 clause 定位对应 shares。
-func resolveSharesForClause(pkg *model.SecureInputPackage, clause model.Clause) ([]string, bool) {
-	if pkg == nil {
-		return nil, false
+func getenvIntDefault(key string, fallback int) int {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return fallback
 	}
-
-	for _, party := range pkg.Parties {
-		if strings.TrimSpace(party.Party) != strings.TrimSpace(clause.Owner) {
-			continue
-		}
-
-		if party.EncodedInputs != nil {
-			sourceView := party.EncodedInputs[clause.Source]
-			if sourceView != nil {
-				if shares, ok := sourceView[clause.Field]; ok && len(shares) > 0 {
-					return shares, true
-				}
-			}
-		}
-
-		if party.ShareMap != nil {
-			key := buildShareKey(clause.Source, clause.Field)
-			if shares, ok := party.ShareMap[key]; ok && len(shares) > 0 {
-				return shares, true
-			}
-		}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return fallback
 	}
-
-	return nil, false
+	return n
 }
 
-// resolveSecureActualValue 是 Mock backend 用的。
-// 它直接读取原始 Inputs，因此属于 mock 占位逻辑。
+func getenvBoolDefault(key string, fallback bool) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	if v == "" {
+		return fallback
+	}
+	switch v {
+	case "1", "true", "yes", "y", "on":
+		return true
+	case "0", "false", "no", "n", "off":
+		return false
+	default:
+		return fallback
+	}
+}
+
+// resolveSecureActualValue 是 mock 和 real_mpc 共用的定位函数。
+// 它从 SecureInputPackage 里找到 owner/source/field 对应的原始值。
 func resolveSecureActualValue(pkg *model.SecureInputPackage, clause model.Clause) (string, bool) {
 	if pkg == nil {
 		return "", false
@@ -629,4 +776,51 @@ func resolveSecureActualValue(pkg *model.SecureInputPackage, clause model.Clause
 	}
 
 	return "", false
+}
+
+// ------------------------------------------------------------
+// Share 编码 / 解码辅助逻辑
+// ------------------------------------------------------------
+
+// encodeSecureInputs 将原始输入编码为 shares。
+// 这是 mock/模拟逻辑，不是真实 MPC secret sharing。
+// 这里的思路是：
+// 1. 先把值转成 hex 字符串
+// 2. 再拆成固定数量的 share 片段
+// 3. 后续 reconstruct 时再拼回
+func encodeSecureInputs(
+	party string,
+	inputs map[string]map[string]any,
+	partyCount int,
+) map[string]map[string][]string {
+	out := make(map[string]map[string][]string)
+
+	for source, fieldMap := range inputs {
+		if out[source] == nil {
+			out[source] = map[string][]string{}
+		}
+
+		for field, value := range fieldMap {
+			raw := toString(value)
+			out[source][field] = []string{
+				fmt.Sprintf("pseudo-share|%s|%s|%s|0|%d|%s", party, source, field, partyCount, raw),
+			}
+		}
+	}
+
+	return out
+}
+
+func flattenEncodedInputMap(encoded map[string]map[string][]string) map[string][]string {
+	out := make(map[string][]string)
+	for source, fieldMap := range encoded {
+		for field, shares := range fieldMap {
+			out[buildShareKey(source, field)] = shares
+		}
+	}
+	return out
+}
+
+func buildShareKey(source string, field string) string {
+	return strings.TrimSpace(source) + "." + strings.TrimSpace(field)
 }
