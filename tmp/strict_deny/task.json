@@ -1,0 +1,102 @@
+{
+  "id": "task-6f2fd33353675283",
+  "request_id": "req-f598e8354fc61169",
+  "session_id": "session-1774945814188-f1a18e0a2c7c",
+  "policy_id": "policy-1774945814184-1efaa0357c56",
+  "plan_id": "plan-1774945814186-7d6a2735587b",
+  "evaluator_mode": "strict_mpc",
+  "backend_mode": "strict_mpyc",
+  "clauses": [
+    {
+      "clause_id": "clause_0",
+      "owner": "requester",
+      "owner_index": 0,
+      "source": "evidence",
+      "field": "department",
+      "op": "eq",
+      "expected_value": "research",
+      "expected_encoding": "eq_hash"
+    },
+    {
+      "clause_id": "clause_1",
+      "owner": "provider",
+      "owner_index": 1,
+      "source": "snapshot",
+      "field": "data_tier",
+      "op": "lte",
+      "expected_value": "2",
+      "expected_encoding": "int_compare"
+    },
+    {
+      "clause_id": "clause_2",
+      "owner": "authority",
+      "owner_index": 2,
+      "source": "context",
+      "field": "risk_score",
+      "op": "lt",
+      "expected_value": "50",
+      "expected_encoding": "int_compare"
+    }
+  ],
+  "ownership_partition": {
+    "authority": [
+      {
+        "source": "context",
+        "field": "risk_score"
+      }
+    ],
+    "provider": [
+      {
+        "source": "snapshot",
+        "field": "data_tier"
+      }
+    ],
+    "requester": [
+      {
+        "source": "evidence",
+        "field": "department"
+      }
+    ]
+  },
+  "binding_info": {
+    "binding_template": {
+      "artifact_sealing": true,
+      "bind_context_digest": true,
+      "bind_evidence_digest": true,
+      "bind_policy_digest": true,
+      "bind_result_receipt": true,
+      "bind_snapshot_digest": true,
+      "transcript_digest_min": true
+    },
+    "complied_function": "compiled_clause_predicate_v1",
+    "context_digest": "41d8aed6d936b8cdc5abe1198e03bb4b42c08ded0aea536d600781e4aaff9dee",
+    "evidence_digest": "dd6bfb94b9896ec464aa98ac9eae86f3c8231b9eaae005cd4a6bb710ad331cd5",
+    "policy_digest": "6b7c14c3d7f0a353b27f0050e38102bc082a0a8ad0e1e391557a80c23943d201",
+    "resource_id": "dataset-001",
+    "snapshot_digest": "a1222c761e9de861afd152073cce6f0ed19e452e68c7bbe77278dc8cf59a2ba2"
+  },
+  "result_callback": {
+    "submit_url": "http://127.0.0.1:8080/api/v1/sessions/session-1774945814188-f1a18e0a2c7c/mpc-result"
+  },
+  "metadata": {
+    "clause_count": 3,
+    "party_count": 3,
+    "policy_relevant_evidence_keys": [
+      "department"
+    ],
+    "required_state_dependencies": [
+      "data_tier",
+      "risk_score"
+    ],
+    "supported_ops": [
+      "eq",
+      "neq",
+      "gt",
+      "gte",
+      "lt",
+      "lte"
+    ]
+  },
+  "manifest_digest": "c5b4bb9e29d572f0a728dba6fdfc40299f5049f5c39fc1241146ff175b6d1fa6",
+  "created_at": "2026-03-31T16:30:14.191260877+08:00"
+}

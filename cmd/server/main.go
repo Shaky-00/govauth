@@ -34,7 +34,7 @@ func main() {
 	h := handler.New(svc)
 	r := router.New(h)
 
-	log.Printf("govauth listening on %s evaluator=%s backend=%s", addr, evaluatorMode, backendMode)
+	log.Printf("govauth listening on %s evaluator=%s backend=%s", addr, svc.CurrentEvaluatorMode(), backendMode)
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}

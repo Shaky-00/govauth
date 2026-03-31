@@ -18,10 +18,29 @@ type EvaluationInput struct {
 }
 
 type Evaluator interface {
-	Mode() string // 当前evaluator模式（plain / secure_stub）
+	Mode() string
+}
 
+// SyncEvaluator 表示“在 GovAuth 内同步完成决策”的 evaluator。
+// 目前只有 plain baseline 使用。
+type SyncEvaluator interface {
+	Evaluator
 	Evaluate(in EvaluationInput) (*model.EvaluationResult, error)
 }
+
+// AsyncTaskEvaluator 表示两阶段 strict MPC evaluator：
+// 1. GovAuth 先prepare一个public task spec
+// 2. 外部 party agents 运行MPC
+// 3. GovAuth 再用 Complete 对最小 receipt 做绑定校验并落盘
+type AsyncTaskEvaluator interface {
+	Evaluator
+	Prepare(in EvaluationInput) (*model.StrictMPCTaskSpec, error)
+	Complete(in EvaluationInput, task *model.StrictMPCTaskSpec, receipt *model.StrictMPCResultReceipt) (*model.EvaluationResult, error)
+}
+
+// ------------------------------------------------------------
+// PlainEvaluator：仅作为 baseline 保留
+// ------------------------------------------------------------
 
 type PlainEvaluator struct{}
 
@@ -54,195 +73,116 @@ func (e *PlainEvaluator) Evaluate(in EvaluationInput) (*model.EvaluationResult, 
 	}, nil
 }
 
-// SecureOrchestratingEvaluator 正式的安全执行编排器
-// 主要负责：
-// 1. build secure input package
-// 2. assemble secure execution request
-// 3. call secure backend
-// 4. map backend result to evaluation result
-type SecureOrchestratingEvaluator struct {
-	mode    string
-	backend SecureBackend
+// ------------------------------------------------------------
+// StrictMPCEvaluator：GovAuth 不再接触私有输入明文
+// ------------------------------------------------------------
+
+type StrictMPCEvaluator struct {
+	backend StrictMPCBackend
 }
 
-func NewSecureOrchestratingEvaluator(backend SecureBackend) *SecureOrchestratingEvaluator {
-	if backend == nil {
-		backend = NewMockMPCBackend()
-	}
-	return &SecureOrchestratingEvaluator{
-		mode:    model.EvaluatorModeSecureOrchestrating,
-		backend: backend,
-	}
+func NewStrictMPCEvaluator(backend StrictMPCBackend) *StrictMPCEvaluator {
+	return &StrictMPCEvaluator{backend: backend}
 }
 
-// 兼容 Secure_stub
-
-// SecureStubEvaluator: 按照owner拆分输入，构造多方输入视图，先本地模拟安全求值、
-// type SecureStubEvaluator struct{}
-
-func NewSecureStubEvaluator() *SecureOrchestratingEvaluator {
-	return &SecureOrchestratingEvaluator{
-		mode:    model.EvaluatorModeSecureStub,
-		backend: NewMockMPCBackend(),
-	}
+func (e *StrictMPCEvaluator) Mode() string {
+	return model.EvaluatorModeStrictMPC
 }
 
-func (e *SecureOrchestratingEvaluator) Mode() string {
-	if e == nil || strings.TrimSpace(e.mode) == "" {
-		return model.EvaluatorModeSecureOrchestrating
-	}
-	return e.mode
-}
-
-func (e *SecureOrchestratingEvaluator) Evaluate(in EvaluationInput) (*model.EvaluationResult, error) {
+// Prepare 只生成公开 task spec，不读取也不拼接各方私有值
+func (e *StrictMPCEvaluator) Prepare(in EvaluationInput) (*model.StrictMPCTaskSpec, error) {
 	if err := validateEvaluationInput(in); err != nil {
 		return nil, err
 	}
 	if e.backend == nil {
-		return nil, fmt.Errorf("secure orchestrating evaluator missing backend")
+		return nil, fmt.Errorf("strict MPC evaluator missing backend")
 	}
 
-	pkg, err := buildSecureInputPackage(in)
-	if err != nil {
-		return nil, err
-	}
-
-	req := assembleSecureExecutionRequest(in, e.mode, e.backend.Mode(), pkg)
-
-	secureResult, err := e.backend.Execute(req)
-	if err != nil {
-		return nil, err
-	}
-
-	return mapSecureExecutionToEvaluationResult(in, e.mode, secureResult), nil
+	req := assembleStrictExecutionRequest(in, e.backend.Mode())
+	return e.backend.PrepareTask(req)
 }
 
-// Warning：当前GovAuth能够看到多party的输入
-func buildSecureInputPackage(in EvaluationInput) (*model.SecureInputPackage, error) {
-	partyView := buildSecurePartyView(in)
-	parties := make([]model.SecurePartyInput, 0, len(partyView))
-	totalFieldCount := 0
-
-	orderedOwners := []string{
-		model.ClauseOwnerRequester,
-		model.ClauseOwnerProvider,
-		model.ClauseOwnerAuthority,
+// Complete 只对 MPC receipt 做绑定校验与结构化落盘
+func (e *StrictMPCEvaluator) Complete(
+	in EvaluationInput,
+	task *model.StrictMPCTaskSpec,
+	receipt *model.StrictMPCResultReceipt,
+) (*model.EvaluationResult, error) {
+	if err := validateEvaluationInput(in); err != nil {
+		return nil, err
+	}
+	if task == nil {
+		return nil, fmt.Errorf("strict MPC completion missing task spec")
+	}
+	if receipt == nil {
+		return nil, fmt.Errorf("strict MPC completion missing receipt")
+	}
+	if e.backend == nil {
+		return nil, fmt.Errorf("strict MPC evaluator missing backend")
 	}
 
-	partyCount := len(orderedOwners)
-	threshold := 1
-	if partyCount >= 3 {
-		// MPyC 的经典半诚实门限通常要求 t < m/2。
-		// 在 3 方时，t=1 是自然选择。
-		threshold = 1
+	secureResult, err := e.backend.VerifyReceipt(task, receipt)
+	if err != nil {
+		return nil, err
 	}
 
-	for _, owner := range orderedOwners {
-		sourceView := partyView[owner]
-		if sourceView == nil {
-			sourceView = map[string]map[string]any{}
-		}
-
-		encodedInputs := encodeSecureInputs(owner, sourceView, partyCount)
-		shareMap := flattenEncodedInputMap(encodedInputs)
-		fieldCount := countSecureFields(sourceView)
-
-		parties = append(parties, model.SecurePartyInput{
-			Party:         owner,
-			Inputs:        sourceView,
-			EncodedInputs: encodedInputs,
-			ShareMap:      shareMap,
-			Meta: map[string]any{
-				"field_count": fieldCount,
-				"share_count": len(shareMap),
-				"threshold":   threshold,
-				"share_ready": true,
-			},
-		})
-		totalFieldCount += fieldCount
-	}
-
-	return &model.SecureInputPackage{
-		PackageID: "pkd-" + hash.AnySHA256Hex(map[string]any{
-			"session_id":  in.Session.ID,
-			"plan_id":     in.Plan.ID,
-			"built_at":    time.Now().UnixNano(),
-			"party_count": len(parties),
-		})[:16],
+	return &model.EvaluationResult{
 		SessionID:       in.Session.ID,
-		PolicyID:        in.Session.PolicyID,
-		PlanID:          in.Session.PlanID,
-		Parties:         parties,
-		PartyCount:      partyCount,
-		Threshold:       threshold,
-		ClauseCount:     len(in.Plan.Clauses),
-		TotalFieldCount: totalFieldCount,
-		BuiltAt:         time.Now(),
+		Decision:        secureResult.Decision,
+		Reason:          secureResult.Reason,
+		EvaluatorMode:   e.Mode(),
+		BackendMode:     secureResult.BackendMode,
+		SecureExecution: secureResult,
+		EvaluatedAt:     secureResult.ExecutedAt,
 	}, nil
 }
 
-func assembleSecureExecutionRequest(
-	in EvaluationInput,
-	evaluatorMode string,
-	backendMode string,
-	pkg *model.SecureInputPackage,
-) *model.SecureExecutionRequest {
+// assembleStrictExecutionRequest 构造 strict backend 所需的公共任务描述。
+// 这里显式只传 digest / binding，不传 party 私有值。
+func assembleStrictExecutionRequest(in EvaluationInput, backendMode string) *model.SecureExecutionRequest {
+	contextDigest := hash.AnySHA256Hex(in.Session.Context)
+
 	return &model.SecureExecutionRequest{
 		RequestID: "req-" + hash.AnySHA256Hex(map[string]any{
-			"session_id":     in.Session.ID,
-			"plan_id":        in.Plan.ID,
-			"evaluator_mode": evaluatorMode,
-			"backend_mode":   backendMode,
-			"time":           time.Now().UnixNano(),
+			"session_id":   in.Session.ID,
+			"plan_id":      in.Plan.ID,
+			"backend_mode": backendMode,
+			"time":         time.Now().UnixNano(),
 		})[:16],
-		SessionID:     in.Session.ID,
-		PolicyID:      in.Session.PolicyID,
-		PlanID:        in.Plan.ID,
-		EvaluatorMode: evaluatorMode,
-		BackendMode:   backendMode,
-		Clauses:       in.Plan.Clauses,
-		InputPackage:  pkg,
-		ExecutionHints: map[string]any{
-			"resource_id":              in.Session.ResourceID,
-			"release_binding_required": in.Plan.ReleaseBindingRequired,
-			"canonical_policy":         in.Plan.ExecutionHints["canonical_policy"],
-			"clause_count":             len(in.Plan.Clauses),
-			"party_count":              pkg.PartyCount,
-			"threshold":                pkg.Threshold,
+		SessionID:      in.Session.ID,
+		PolicyID:       in.Session.PolicyID,
+		PlanID:         in.Plan.ID,
+		EvaluatorMode:  model.EvaluatorModeStrictMPC,
+		BackendMode:    backendMode,
+		Plan:           in.Plan,
+		Clauses:        in.Plan.Clauses,
+		EvidenceDigest: safeDigestOrEmpty(in.Evidence.EvidenceDigest),
+		SnapshotDigest: safeDigestOrEmpty(in.Snapshot.SnapshotDigest),
+		ContextDigest:  contextDigest,
+		BindingInfo: map[string]any{
+			"policy_digest":             in.Plan.DerivedFromPolicyDigest,
+			"evidence_digest":           safeDigestOrEmpty(in.Evidence.EvidenceDigest),
+			"snapshot_digest":           safeDigestOrEmpty(in.Snapshot.SnapshotDigest),
+			"context_digest":            contextDigest,
+			"release_binding_required":  in.Plan.ReleaseBindingRequired,
+			"compiled_function":         in.Plan.CompiledFunction,
+			"ownership_partition":       in.Plan.OwnershipPartition,
+			"resource_id":               in.Session.ResourceID,
+			"session_public_context":    in.Session.Context,
+			"policy_relevant_evidence":  in.Plan.PolicyRelevantEvidenceKeys,
+			"required_state_dependency": in.Plan.RequiredStateDependencies,
 		},
 		RequestedAt: time.Now(),
 	}
 }
 
-func mapSecureExecutionToEvaluationResult(
-	in EvaluationInput,
-	evaluatorMode string,
-	secureResult *model.SecureExecutionResult,
-) *model.EvaluationResult {
-	reason := ""
-	backendMode := ""
-	evaluatedAt := time.Now()
-	decision := model.DecisionDeny
-
-	if secureResult != nil {
-		reason = secureResult.Reason
-		backendMode = secureResult.BackendMode
-		decision = secureResult.Decision
-		if !secureResult.ExecutedAt.IsZero() {
-			evaluatedAt = secureResult.ExecutedAt
-		}
-	}
-
-	return &model.EvaluationResult{
-		SessionID:       in.Session.ID,
-		Decision:        decision,
-		Reason:          reason,
-		EvaluatorMode:   evaluatorMode,
-		BackendMode:     backendMode,
-		SecureExecution: secureResult,
-		EvaluatedAt:     evaluatedAt,
-	}
+func safeDigestOrEmpty(v string) string {
+	return strings.TrimSpace(v)
 }
+
+// ------------------------------------------------------------
+// Plain baseline 下的最小 clause evaluator
+// ------------------------------------------------------------
 
 // 最小可运行 clause evaluator
 func evaluateClauses(
@@ -264,16 +204,6 @@ func evaluateClauses(
 			continue
 		}
 
-		// switch clause.Op {
-		// case model.ClauseOpEq:
-		// 	if !strings.EqualFold(actual, expected) {
-		// 		decision = model.DecisionDeny
-		// 		reasons = append(reasons, fmt.Sprintf("%s.%s mismatch (owner=%s)", clause.Source, clause.Field, clause.Owner))
-		// 	}
-		// default:
-		// 	decision = model.DecisionDeny
-		// 	reasons = append(reasons, fmt.Sprintf("unsupported op %s", clause.Op))
-		// }
 		ok, cmpErr := compareClauseValues(clause.Op, actual, expected)
 		if cmpErr != nil {
 			decision = model.DecisionDeny
@@ -331,51 +261,6 @@ func resolveClauseActualValue(
 	default:
 		return "", fmt.Errorf("unknown source %s", clause.Source)
 	}
-}
-
-// 构造secure stub的多方输入视图
-// 结构含义：owner -> source -> field -> value
-func buildSecurePartyView(in EvaluationInput) map[string]map[string]map[string]any {
-	view := map[string]map[string]map[string]any{
-		model.ClauseOwnerRequester: {},
-		model.ClauseOwnerProvider:  {},
-		model.ClauseOwnerAuthority: {},
-	}
-
-	for _, clause := range in.Plan.Clauses {
-		owner := strings.TrimSpace(clause.Owner)
-		source := strings.TrimSpace(clause.Source)
-		field := strings.TrimSpace(clause.Field)
-
-		if owner == "" || source == "" || field == "" {
-			continue
-		}
-
-		if _, ok := view[owner]; !ok {
-			view[owner] = map[string]map[string]any{}
-		}
-		if _, ok := view[owner][source]; !ok {
-			view[owner][source] = map[string]any{}
-		}
-
-		actual, err := resolveClauseActualValue(clause, in.Evidence, in.Snapshot, in.Session)
-		if err != nil {
-			continue
-		}
-
-		view[owner][source][field] = actual
-	}
-
-	return view
-}
-
-// 统计某个owner视图下总共装了多少个字段，便于输出调试信息
-func countSecureFields(ownerView map[string]map[string]any) int {
-	total := 0
-	for _, sourceView := range ownerView {
-		total += len(sourceView)
-	}
-	return total
 }
 
 func toString(v any) string {

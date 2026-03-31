@@ -8,7 +8,7 @@ import (
 )
 
 // Store 是一个最小可运行的内存仓库。
-// 当前版本不接数据库，所有对象都保存在内存中，便于快速验证 happy path。
+// 当前版本不接数据库，所有对象都保存在内存中，便于快速验证 strict MPC happy / deny path。
 type Store struct {
 	mu          sync.RWMutex
 	policies    map[string]*model.Policy
@@ -16,6 +16,7 @@ type Store struct {
 	sessions    map[string]*model.ExecutionSession
 	evidences   map[string]*model.EvidenceRecord
 	snapshots   map[string]*model.PinnedSnapshot
+	taskSpecs   map[string]*model.StrictMPCTaskSpec
 	evaluations map[string]*model.EvaluationResult
 	artifacts   map[string]*model.AuthorizationArtifact
 	events      []*model.TransitionEvent
@@ -29,6 +30,7 @@ func NewStore() *Store {
 		sessions:    make(map[string]*model.ExecutionSession),
 		evidences:   make(map[string]*model.EvidenceRecord),
 		snapshots:   make(map[string]*model.PinnedSnapshot),
+		taskSpecs:   make(map[string]*model.StrictMPCTaskSpec),
 		evaluations: make(map[string]*model.EvaluationResult),
 		artifacts:   make(map[string]*model.AuthorizationArtifact),
 		events:      make([]*model.TransitionEvent, 0),
@@ -113,6 +115,22 @@ func (s *Store) GetSnapshot(id string) (*model.PinnedSnapshot, error) {
 		return nil, fmt.Errorf("snapshot not found: %s", id)
 	}
 	return snapshot, nil
+}
+
+func (s *Store) SaveTaskSpec(task *model.StrictMPCTaskSpec) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.taskSpecs[task.ID] = task
+}
+
+func (s *Store) GetTaskSpec(id string) (*model.StrictMPCTaskSpec, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	task, ok := s.taskSpecs[id]
+	if !ok {
+		return nil, fmt.Errorf("task spec not found: %s", id)
+	}
+	return task, nil
 }
 
 func (s *Store) SaveEvaluation(e *model.EvaluationResult) {

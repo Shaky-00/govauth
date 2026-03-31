@@ -6,6 +6,7 @@ import (
 
 	"govauth/internal/api/dto"
 	"govauth/internal/app/workflow"
+	"govauth/internal/domain/model"
 
 	"github.com/gin-gonic/gin"
 )
@@ -165,13 +166,56 @@ func (h *Handler) PinSnapshot(c *gin.Context) {
 
 // Evaluate 执行 T4 决策。
 func (h *Handler) Evaluate(c *gin.Context) {
-	result, session, err := h.svc.Evaluate(c.Param("id"))
+	switch h.svc.CurrentEvaluatorMode() {
+	case model.EvaluatorModeStrictMPC, model.EvaluatorModeSecureOrchestrating:
+		task, session, err := h.svc.PrepareEvaluationTask(c.Param("id"))
+		if err != nil {
+			respondServiceError(c, err)
+			return
+		}
+		respondOK(c, "strict MPC task prepared", gin.H{
+			"task_spec": task,
+			"session":   session,
+		})
+		return
+	default:
+		result, session, err := h.svc.Evaluate(c.Param("id"))
+		if err != nil {
+			respondServiceError(c, err)
+			return
+		}
+		respondOK(c, "evaluation completed", gin.H{
+			"evaluation": result,
+			"session":    session,
+		})
+	}
+}
+
+// 查询 strict MPC task spec
+func (h *Handler) GetTask(c *gin.Context) {
+	task, err := h.svc.GetTaskSpecBySession(c.Param("id"))
+	if err != nil {
+		respondServiceError(c, err)
+		return
+	}
+	respondOK(c, "task fetched", task)
+}
+
+// 接收 strict MPC runtime 提交的最小结果回执
+func (h *Handler) SubmitMPCResult(c *gin.Context) {
+	var receipt model.StrictMPCResultReceipt
+	if err := c.ShouldBindJSON(&receipt); err != nil {
+		respondError(c, http.StatusBadRequest, err)
+		return
+	}
+
+	result, session, err := h.svc.SubmitMPCResult(c.Param("id"), &receipt)
 	if err != nil {
 		respondServiceError(c, err)
 		return
 	}
 
-	respondOK(c, "evaluation completed", gin.H{
+	respondOK(c, "strict MPC result accepted", gin.H{
 		"evaluation": result,
 		"session":    session,
 	})

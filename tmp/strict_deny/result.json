@@ -1,0 +1,67 @@
+{
+  "task_id": "task-6f2fd33353675283",
+  "request_id": "req-f598e8354fc61169",
+  "session_id": "session-1774945814188-f1a18e0a2c7c",
+  "plan_id": "plan-1774945814186-7d6a2735587b",
+  "decision": "DENY",
+  "clause_count": 3,
+  "clause_results": [
+    {
+      "clause_id": "clause_0",
+      "owner": "requester",
+      "source": "evidence",
+      "field": "department",
+      "op": "eq",
+      "passed": true
+    },
+    {
+      "clause_id": "clause_1",
+      "owner": "provider",
+      "source": "snapshot",
+      "field": "data_tier",
+      "op": "lte",
+      "passed": true
+    },
+    {
+      "clause_id": "clause_2",
+      "owner": "authority",
+      "source": "context",
+      "field": "risk_score",
+      "op": "lt",
+      "passed": false
+    }
+  ],
+  "transcript_digest": "0536398170526c9b30ec39cb70009bfb5c0a64b2d4062926c73d9d894985990d",
+  "result_digest": "bacf89baf5896b15b80889756376d472590ec52ecc9c6064fb44f09f96a105ff",
+  "proof_receipt": "57f5927854b92a7b483effb3e127d3c0cf3d0870b119631b69ec4688ddbd923c",
+  "metadata": {
+    "runtime": "mpyc",
+    "party_count": 3,
+    "owner_partition": {
+      "authority": [
+        {
+          "source": "context",
+          "field": "risk_score"
+        }
+      ],
+      "provider": [
+        {
+          "source": "snapshot",
+          "field": "data_tier"
+        }
+      ],
+      "requester": [
+        {
+          "source": "evidence",
+          "field": "department"
+        }
+      ]
+    },
+    "timings_ms": {
+      "mpc_start_ms": 4.626,
+      "clause_eval_ms": 10.237,
+      "decision_reduce_ms": 0.377,
+      "total_party_ms": 16.919
+    }
+  }
+}

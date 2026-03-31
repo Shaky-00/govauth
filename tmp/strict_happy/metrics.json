@@ -1,0 +1,94 @@
+{
+  "scenario": "happy",
+  "metrics_ms": {
+    "create_policy_ms": 5.138,
+    "admit_policy_ms": 1.303,
+    "publish_policy_ms": 1.026,
+    "derive_plan_ms": 0.656,
+    "create_session_ms": 0.869,
+    "bind_evidence_ms": 1.127,
+    "bind_snapshot_ms": 1.526,
+    "prepare_task_ms": 1.438,
+    "mpc_runtime_ms": 173.861,
+    "submit_receipt_ms": 1.194,
+    "seal_artifact_ms": 0.774,
+    "fetch_audit_ms": 0.952
+  },
+  "latency_groups_ms": {
+    "govauth_control_plane_ms": 13.083,
+    "mpc_runtime_ms": 173.861,
+    "artifact_and_audit_ms": 2.92,
+    "end_to_end_ms": 189.864
+  },
+  "policy_stats": {
+    "clause_count": 3,
+    "owner_count": 3,
+    "source_count": 3,
+    "op_count": 3,
+    "owners": [
+      "authority",
+      "provider",
+      "requester"
+    ],
+    "sources": [
+      "context",
+      "evidence",
+      "snapshot"
+    ],
+    "ops": [
+      "eq",
+      "lt",
+      "lte"
+    ],
+    "distinct_fields": 3,
+    "attribute_paths": [
+      "context.risk_score",
+      "evidence.department",
+      "snapshot.data_tier"
+    ],
+    "clauses_by_owner": {
+      "requester": 1,
+      "provider": 1,
+      "authority": 1
+    },
+    "clauses_by_source": {
+      "evidence": 1,
+      "snapshot": 1,
+      "context": 1
+    },
+    "clauses_by_op": {
+      "eq": 1,
+      "lte": 1,
+      "lt": 1
+    },
+    "comparison_profile": {
+      "eq_hash": 1,
+      "int_compare": 2
+    },
+    "complexity_score": 9
+  },
+  "attribute_stats": {
+    "total_attributes": 3,
+    "requester_attributes": 1,
+    "provider_attributes": 1,
+    "authority_attributes": 1,
+    "attribute_paths": [
+      "context.risk_score",
+      "evidence.department",
+      "snapshot.data_tier"
+    ]
+  },
+  "result_stats": {
+    "decision": "ALLOW",
+    "passed_clause_count": 3,
+    "failed_clause_count": 0,
+    "pass_rate": 1.0,
+    "failed_clauses": []
+  },
+  "mpc_inner_timings_ms": {
+    "mpc_start_ms": 4.459,
+    "clause_eval_ms": 12.049,
+    "decision_reduce_ms": 0.601,
+    "total_party_ms": 18.877
+  }
+}

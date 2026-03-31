@@ -38,8 +38,11 @@ func New(h *handler.Handler) *gin.Engine {
 		api.POST("/sessions/:id/evidence", h.AdmitEvidence)
 		api.POST("/sessions/:id/snapshot", h.PinSnapshot)
 		api.POST("/sessions/:id/evaluate", h.Evaluate)
+		api.GET("/sessions/:id/task", h.GetTask)
+		api.POST("/sessions/:id/mpc-result", h.SubmitMPCResult)
 		api.POST("/sessions/:id/artifact", h.SealArtifact)
 		api.GET("/sessions/:id/audit", h.GetAuditBundle)
+
 		api.GET("/artifacts/:id", h.GetArtifact)
 	}
 

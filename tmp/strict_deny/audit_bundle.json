@@ -1,0 +1,531 @@
+{
+  "message": "audit bundle fetched",
+  "data": {
+    "policy": {
+      "id": "policy-1774945814184-1efaa0357c56",
+      "name": "strict-mpc-demo-policy",
+      "version": 1,
+      "status": "PUBLISHED",
+      "content": {
+        "clauses": [
+          {
+            "source": "evidence",
+            "field": "department",
+            "op": "eq",
+            "value": "research",
+            "owner": "requester"
+          },
+          {
+            "source": "snapshot",
+            "field": "data_tier",
+            "op": "lte",
+            "value": "2",
+            "owner": "provider"
+          },
+          {
+            "source": "context",
+            "field": "risk_score",
+            "op": "lt",
+            "value": "50",
+            "owner": "authority"
+          }
+        ],
+        "description": "Strict MPC demo policy: three parties each own one private input."
+      },
+      "digest": "6b7c14c3d7f0a353b27f0050e38102bc082a0a8ad0e1e391557a80c23943d201",
+      "created_at": "2026-03-31T16:30:14.184656169+08:00",
+      "updated_at": "2026-03-31T16:30:14.1862416+08:00"
+    },
+    "plan": {
+      "id": "plan-1774945814186-7d6a2735587b",
+      "policy_id": "policy-1774945814184-1efaa0357c56",
+      "policy_version": 1,
+      "clauses": [
+        {
+          "source": "evidence",
+          "field": "department",
+          "op": "eq",
+          "value": "research",
+          "owner": "requester"
+        },
+        {
+          "source": "snapshot",
+          "field": "data_tier",
+          "op": "lte",
+          "value": "2",
+          "owner": "provider"
+        },
+        {
+          "source": "context",
+          "field": "risk_score",
+          "op": "lt",
+          "value": "50",
+          "owner": "authority"
+        }
+      ],
+      "k_e": [
+        "department"
+      ],
+      "k_s": [
+        "data_tier",
+        "risk_score"
+      ],
+      "d": {
+        "authority": [
+          {
+            "source": "context",
+            "field": "risk_score"
+          }
+        ],
+        "provider": [
+          {
+            "source": "snapshot",
+            "field": "data_tier"
+          }
+        ],
+        "requester": [
+          {
+            "source": "evidence",
+            "field": "department"
+          }
+        ]
+      },
+      "f_p": "compiled_clause_predicate_v1",
+      "b": {
+        "artifact_sealing": true,
+        "bind_context_digest": true,
+        "bind_evidence_digest": true,
+        "bind_policy_digest": true,
+        "bind_result_receipt": true,
+        "bind_snapshot_digest": true,
+        "transcript_digest_min": true
+      },
+      "admissible_evidence_keys": [
+        "department"
+      ],
+      "required_snapshot_keys": [
+        "data_tier"
+      ],
+      "release_binding_required": true,
+      "execution_hints": {
+        "canonical_policy": "clauses",
+        "clause_count": 3,
+        "strict_mpc_ready": true
+      },
+      "derived_from_policy_digest": "6b7c14c3d7f0a353b27f0050e38102bc082a0a8ad0e1e391557a80c23943d201",
+      "created_at": "2026-03-31T16:30:14.1869839+08:00"
+    },
+    "session": {
+      "id": "session-1774945814188-f1a18e0a2c7c",
+      "policy_id": "policy-1774945814184-1efaa0357c56",
+      "plan_id": "plan-1774945814186-7d6a2735587b",
+      "requester": "alice",
+      "resource_id": "dataset-001",
+      "context": {
+        "authority_private_digest": "b86a1d55b401131ae80fd9006b18ef0232266a5a320408223b03c0d0bd5fce98",
+        "authority_private_ref": "local:///root/projects/govauth/demo/strict/deny/authority_private.json",
+        "purpose": "analytics-demo"
+      },
+      "state": "ENFORCED",
+      "evidence_id": "evidence-1774945814189-834e22d40ac7",
+      "snapshot_id": "snapshot-1774945814190-69eb75ab4d50",
+      "task_spec_id": "task-6f2fd33353675283",
+      "evaluation_id": "eval-1774945814357-7ee15a517ca1",
+      "artifact_id": "artifact-1774945814358-8e8783f426a6",
+      "created_at": "2026-03-31T16:30:14.188032936+08:00",
+      "updated_at": "2026-03-31T16:30:14.358517123+08:00"
+    },
+    "evidence": {
+      "id": "evidence-1774945814189-834e22d40ac7",
+      "session_id": "session-1774945814188-f1a18e0a2c7c",
+      "payload": {
+        "private_digest": "dd6bfb94b9896ec464aa98ac9eae86f3c8231b9eaae005cd4a6bb710ad331cd5",
+        "public_meta": {
+          "fields": [
+            "evidence.department"
+          ],
+          "owner": "requester"
+        },
+        "reference": "local:///root/projects/govauth/demo/strict/deny/requester_private.json"
+      },
+      "evidence_digest": "dd6bfb94b9896ec464aa98ac9eae86f3c8231b9eaae005cd4a6bb710ad331cd5",
+      "evidence_ref": "local:///root/projects/govauth/demo/strict/deny/requester_private.json",
+      "admitted": true,
+      "created_at": "2026-03-31T16:30:14.18946958+08:00"
+    },
+    "snapshot": {
+      "id": "snapshot-1774945814190-69eb75ab4d50",
+      "session_id": "session-1774945814188-f1a18e0a2c7c",
+      "payload": {
+        "private_digest": "a1222c761e9de861afd152073cce6f0ed19e452e68c7bbe77278dc8cf59a2ba2",
+        "public_meta": {
+          "fields": [
+            "snapshot.data_tier"
+          ],
+          "owner": "provider"
+        },
+        "reference": "local:///root/projects/govauth/demo/strict/deny/provider_private.json"
+      },
+      "snapshot_digest": "a1222c761e9de861afd152073cce6f0ed19e452e68c7bbe77278dc8cf59a2ba2",
+      "snapshot_ref": "local:///root/projects/govauth/demo/strict/deny/provider_private.json",
+      "pinned_at": "2026-03-31T16:30:14.190534606+08:00"
+    },
+    "task_spec": {
+      "id": "task-6f2fd33353675283",
+      "request_id": "req-f598e8354fc61169",
+      "session_id": "session-1774945814188-f1a18e0a2c7c",
+      "policy_id": "policy-1774945814184-1efaa0357c56",
+      "plan_id": "plan-1774945814186-7d6a2735587b",
+      "evaluator_mode": "strict_mpc",
+      "backend_mode": "strict_mpyc",
+      "clauses": [
+        {
+          "clause_id": "clause_0",
+          "owner": "requester",
+          "owner_index": 0,
+          "source": "evidence",
+          "field": "department",
+          "op": "eq",
+          "expected_value": "research",
+          "expected_encoding": "eq_hash"
+        },
+        {
+          "clause_id": "clause_1",
+          "owner": "provider",
+          "owner_index": 1,
+          "source": "snapshot",
+          "field": "data_tier",
+          "op": "lte",
+          "expected_value": "2",
+          "expected_encoding": "int_compare"
+        },
+        {
+          "clause_id": "clause_2",
+          "owner": "authority",
+          "owner_index": 2,
+          "source": "context",
+          "field": "risk_score",
+          "op": "lt",
+          "expected_value": "50",
+          "expected_encoding": "int_compare"
+        }
+      ],
+      "ownership_partition": {
+        "authority": [
+          {
+            "source": "context",
+            "field": "risk_score"
+          }
+        ],
+        "provider": [
+          {
+            "source": "snapshot",
+            "field": "data_tier"
+          }
+        ],
+        "requester": [
+          {
+            "source": "evidence",
+            "field": "department"
+          }
+        ]
+      },
+      "binding_info": {
+        "binding_template": {
+          "artifact_sealing": true,
+          "bind_context_digest": true,
+          "bind_evidence_digest": true,
+          "bind_policy_digest": true,
+          "bind_result_receipt": true,
+          "bind_snapshot_digest": true,
+          "transcript_digest_min": true
+        },
+        "complied_function": "compiled_clause_predicate_v1",
+        "context_digest": "41d8aed6d936b8cdc5abe1198e03bb4b42c08ded0aea536d600781e4aaff9dee",
+        "evidence_digest": "dd6bfb94b9896ec464aa98ac9eae86f3c8231b9eaae005cd4a6bb710ad331cd5",
+        "policy_digest": "6b7c14c3d7f0a353b27f0050e38102bc082a0a8ad0e1e391557a80c23943d201",
+        "resource_id": "dataset-001",
+        "snapshot_digest": "a1222c761e9de861afd152073cce6f0ed19e452e68c7bbe77278dc8cf59a2ba2"
+      },
+      "result_callback": {
+        "submit_url": "http://127.0.0.1:8080/api/v1/sessions/session-1774945814188-f1a18e0a2c7c/mpc-result"
+      },
+      "metadata": {
+        "clause_count": 3,
+        "party_count": 3,
+        "policy_relevant_evidence_keys": [
+          "department"
+        ],
+        "required_state_dependencies": [
+          "data_tier",
+          "risk_score"
+        ],
+        "supported_ops": [
+          "eq",
+          "neq",
+          "gt",
+          "gte",
+          "lt",
+          "lte"
+        ]
+      },
+      "manifest_digest": "c5b4bb9e29d572f0a728dba6fdfc40299f5049f5c39fc1241146ff175b6d1fa6",
+      "created_at": "2026-03-31T16:30:14.191260877+08:00"
+    },
+    "evaluation": {
+      "id": "eval-1774945814357-7ee15a517ca1",
+      "session_id": "session-1774945814188-f1a18e0a2c7c",
+      "decision": "DENY",
+      "reason": "strict MPC result receipt verified with DENY outcome",
+      "evaluator_mode": "strict_mpc",
+      "backend_mode": "strict_mpyc",
+      "secure_execution": {
+        "execution_id": "secure-exec-dc951351e68f9c81",
+        "task_id": "task-6f2fd33353675283",
+        "session_id": "session-1774945814188-f1a18e0a2c7c",
+        "backend_mode": "strict_mpyc",
+        "decision": "DENY",
+        "reason": "strict MPC result receipt verified with DENY outcome",
+        "transcript_digest": "0536398170526c9b30ec39cb70009bfb5c0a64b2d4062926c73d9d894985990d",
+        "receipt": {
+          "task_id": "task-6f2fd33353675283",
+          "request_id": "req-f598e8354fc61169",
+          "session_id": "session-1774945814188-f1a18e0a2c7c",
+          "plan_id": "plan-1774945814186-7d6a2735587b",
+          "decision": "DENY",
+          "clause_count": 3,
+          "transcript_digest": "0536398170526c9b30ec39cb70009bfb5c0a64b2d4062926c73d9d894985990d",
+          "result_digest": "bacf89baf5896b15b80889756376d472590ec52ecc9c6064fb44f09f96a105ff",
+          "proof_receipt": "57f5927854b92a7b483effb3e127d3c0cf3d0870b119631b69ec4688ddbd923c",
+          "metadata": {
+            "owner_partition": {
+              "authority": [
+                {
+                  "field": "risk_score",
+                  "source": "context"
+                }
+              ],
+              "provider": [
+                {
+                  "field": "data_tier",
+                  "source": "snapshot"
+                }
+              ],
+              "requester": [
+                {
+                  "field": "department",
+                  "source": "evidence"
+                }
+              ]
+            },
+            "party_count": 3,
+            "runtime": "mpyc",
+            "timings_ms": {
+              "clause_eval_ms": 10.237,
+              "decision_reduce_ms": 0.377,
+              "mpc_start_ms": 4.626,
+              "total_party_ms": 16.919
+            }
+          },
+          "submitted_by": "strict_demo_driver",
+          "submitted_at": "2026-03-31T16:30:14.357638417+08:00"
+        },
+        "steps": [
+          {
+            "name": "verify_task_binding",
+            "status": "ok",
+            "detail": "task_id / request_id / session_id / plan_id are consistent"
+          },
+          {
+            "name": "verify_result_receipt",
+            "status": "ok",
+            "detail": "decision / clause_count / transcript_digest are structurally valid"
+          },
+          {
+            "name": "materialize_secure_result",
+            "status": "ok",
+            "detail": "decision=DENY"
+          }
+        ],
+        "metadata": {
+          "proof_receipt": "57f5927854b92a7b483effb3e127d3c0cf3d0870b119631b69ec4688ddbd923c",
+          "result_digest": "bacf89baf5896b15b80889756376d472590ec52ecc9c6064fb44f09f96a105ff",
+          "submitted_by": "strict_demo_driver",
+          "task_manifest_digest": "c5b4bb9e29d572f0a728dba6fdfc40299f5049f5c39fc1241146ff175b6d1fa6"
+        },
+        "executed_at": "2026-03-31T16:30:14.357648969+08:00"
+      },
+      "evaluated_at": "2026-03-31T16:30:14.357648969+08:00"
+    },
+    "artifact": {
+      "id": "artifact-1774945814358-8e8783f426a6",
+      "session_id": "session-1774945814188-f1a18e0a2c7c",
+      "policy_digest": "6b7c14c3d7f0a353b27f0050e38102bc082a0a8ad0e1e391557a80c23943d201",
+      "evidence_digest": "dd6bfb94b9896ec464aa98ac9eae86f3c8231b9eaae005cd4a6bb710ad331cd5",
+      "lifecycle_digest": "a1222c761e9de861afd152073cce6f0ed19e452e68c7bbe77278dc8cf59a2ba2",
+      "context_digest": "41d8aed6d936b8cdc5abe1198e03bb4b42c08ded0aea536d600781e4aaff9dee",
+      "task_manifest_digest": "c5b4bb9e29d572f0a728dba6fdfc40299f5049f5c39fc1241146ff175b6d1fa6",
+      "result_receipt_digest": "bacf89baf5896b15b80889756376d472590ec52ecc9c6064fb44f09f96a105ff",
+      "authorization_decision": "DENY",
+      "context": {
+        "authority_private_digest": "b86a1d55b401131ae80fd9006b18ef0232266a5a320408223b03c0d0bd5fce98",
+        "authority_private_ref": "local:///root/projects/govauth/demo/strict/deny/authority_private.json",
+        "purpose": "analytics-demo"
+      },
+      "signature": "ba9650f34b94f77c94032f463eb2e5fce262e53fecd5d392b3529d5f50942b20",
+      "artifact_digest": "d76b751cd0650a191516956d4b0a2edfef814fb04152f5f853cdb9491ca1f740",
+      "created_at": "2026-03-31T16:30:14.358455539+08:00"
+    },
+    "events": [
+      {
+        "id": "event-1774945814185-bd731870a0d0",
+        "policy_id": "policy-1774945814184-1efaa0357c56",
+        "action": "T0_POLICY_ADMISSION",
+        "from_state": "DRAFT",
+        "to_state": "ADMISSIBLE",
+        "note": "策略通过治理校验，进入 ADMISSIBLE 状态",
+        "at": "2026-03-31T16:30:14.185615909+08:00"
+      },
+      {
+        "id": "event-1774945814186-d8c3f33e758d",
+        "policy_id": "policy-1774945814184-1efaa0357c56",
+        "action": "T1_POLICY_PUBLICATION",
+        "from_state": "ADMISSIBLE",
+        "to_state": "PUBLISHED",
+        "note": "策略已发布，可进入动态执行阶段",
+        "at": "2026-03-31T16:30:14.186264991+08:00"
+      },
+      {
+        "id": "event-1774945814186-2a3c07c16815",
+        "policy_id": "policy-1774945814184-1efaa0357c56",
+        "action": "PLAN_DERIVATION",
+        "from_state": "PUBLISHED",
+        "to_state": "PUBLISHED",
+        "note": "系统已从 Published Policy 派生出 Enforcement Plan（Π_P）",
+        "meta": {
+          "compiled_function": "compiled_clause_predicate_v1",
+          "k_e": [
+            "department"
+          ],
+          "k_s": [
+            "data_tier",
+            "risk_score"
+          ],
+          "ownership_partition": {
+            "authority": [
+              {
+                "source": "context",
+                "field": "risk_score"
+              }
+            ],
+            "provider": [
+              {
+                "source": "snapshot",
+                "field": "data_tier"
+              }
+            ],
+            "requester": [
+              {
+                "source": "evidence",
+                "field": "department"
+              }
+            ]
+          },
+          "plan_id": "plan-1774945814186-7d6a2735587b"
+        },
+        "at": "2026-03-31T16:30:14.186995554+08:00"
+      },
+      {
+        "id": "event-1774945814188-1351be07efea",
+        "policy_id": "policy-1774945814184-1efaa0357c56",
+        "session_id": "session-1774945814188-f1a18e0a2c7c",
+        "action": "T2_SESSION_BINDING",
+        "from_state": "PUBLISHED",
+        "to_state": "SESSION_BOUND",
+        "note": "系统已建立执行会话，并完成上下文/public binding 绑定",
+        "meta": {
+          "requester": "alice",
+          "resource_id": "dataset-001"
+        },
+        "at": "2026-03-31T16:30:14.188038588+08:00"
+      },
+      {
+        "id": "event-1774945814189-c9b9ed3b6263",
+        "policy_id": "policy-1774945814184-1efaa0357c56",
+        "session_id": "session-1774945814188-f1a18e0a2c7c",
+        "action": "T3_EVIDENCE_BINDING",
+        "from_state": "SESSION_BOUND",
+        "to_state": "EVIDENCE_BOUND",
+        "note": "证据已接纳并绑定到当前会话（strict 模式下仅绑定 digest/ref）",
+        "meta": {
+          "evidence_digest": "dd6bfb94b9896ec464aa98ac9eae86f3c8231b9eaae005cd4a6bb710ad331cd5",
+          "evidence_id": "evidence-1774945814189-834e22d40ac7",
+          "evidence_ref": "local:///root/projects/govauth/demo/strict/deny/requester_private.json"
+        },
+        "at": "2026-03-31T16:30:14.189471838+08:00"
+      },
+      {
+        "id": "event-1774945814190-066f358d3d75",
+        "policy_id": "policy-1774945814184-1efaa0357c56",
+        "session_id": "session-1774945814188-f1a18e0a2c7c",
+        "action": "T3_SNAPSHOT_PINNING",
+        "from_state": "EVIDENCE_BOUND",
+        "to_state": "EVIDENCE_BOUND",
+        "note": "生命周期快照已固定并绑定到当前会话（strict 模式下仅绑定 digest/ref）",
+        "meta": {
+          "snapshot_digest": "a1222c761e9de861afd152073cce6f0ed19e452e68c7bbe77278dc8cf59a2ba2",
+          "snapshot_id": "snapshot-1774945814190-69eb75ab4d50",
+          "snapshot_ref": "local:///root/projects/govauth/demo/strict/deny/provider_private.json"
+        },
+        "at": "2026-03-31T16:30:14.190536668+08:00"
+      },
+      {
+        "id": "event-1774945814191-48893e6e6159",
+        "policy_id": "policy-1774945814184-1efaa0357c56",
+        "session_id": "session-1774945814188-f1a18e0a2c7c",
+        "action": "T4_TASK_ISSUED",
+        "from_state": "EVIDENCE_BOUND",
+        "to_state": "EVIDENCE_BOUND",
+        "note": "strict MPC public task spec 已发布，等待 3 个 party agents 本地执行 MPC",
+        "meta": {
+          "request_id": "req-f598e8354fc61169",
+          "result_submit_url": "http://127.0.0.1:8080/api/v1/sessions/session-1774945814188-f1a18e0a2c7c/mpc-result",
+          "task_id": "task-6f2fd33353675283",
+          "task_manifest": "c5b4bb9e29d572f0a728dba6fdfc40299f5049f5c39fc1241146ff175b6d1fa6"
+        },
+        "at": "2026-03-31T16:30:14.191297522+08:00"
+      },
+      {
+        "id": "event-1774945814357-cbb1b723b1c4",
+        "policy_id": "policy-1774945814184-1efaa0357c56",
+        "session_id": "session-1774945814188-f1a18e0a2c7c",
+        "action": "T4_DECISION",
+        "from_state": "EVIDENCE_BOUND",
+        "to_state": "DECIDED",
+        "note": "策略评估完成，决策结果为 DENY",
+        "meta": {
+          "backend_mode": "strict_mpyc",
+          "decision": "DENY",
+          "evaluation_id": "eval-1774945814357-7ee15a517ca1",
+          "mode": "strict_mpc"
+        },
+        "at": "2026-03-31T16:30:14.357659176+08:00"
+      },
+      {
+        "id": "event-1774945814358-e4b9865b30dc",
+        "policy_id": "policy-1774945814184-1efaa0357c56",
+        "session_id": "session-1774945814188-f1a18e0a2c7c",
+        "action": "T5_ARTIFACT_AND_ENFORCEMENT",
+        "from_state": "DECIDED",
+        "to_state": "ENFORCED",
+        "note": "授权工件已生成，结果已可被数据服务呈现/记录",
+        "meta": {
+          "artifact_digest": "d76b751cd0650a191516956d4b0a2edfef814fb04152f5f853cdb9491ca1f740",
+          "artifact_id": "artifact-1774945814358-8e8783f426a6",
+          "result_receipt_digest": "bacf89baf5896b15b80889756376d472590ec52ecc9c6064fb44f09f96a105ff"
+        },
+        "at": "2026-03-31T16:30:14.35851921+08:00"
+      }
+    ]
+  }
+}

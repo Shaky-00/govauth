@@ -1,0 +1,127 @@
+{
+  "scenario": "deny",
+  "session_id": "session-1774945814188-f1a18e0a2c7c",
+  "policy_id": "policy-1774945814184-1efaa0357c56",
+  "plan_id": "plan-1774945814186-7d6a2735587b",
+  "decision": "DENY",
+  "clause_count": 3,
+  "transcript_digest": "0536398170526c9b30ec39cb70009bfb5c0a64b2d4062926c73d9d894985990d",
+  "result_digest": "bacf89baf5896b15b80889756376d472590ec52ecc9c6064fb44f09f96a105ff",
+  "proof_receipt": "57f5927854b92a7b483effb3e127d3c0cf3d0870b119631b69ec4688ddbd923c",
+  "work_dir": "/root/projects/govauth/tmp/strict_deny",
+  "policy_stats": {
+    "clause_count": 3,
+    "owner_count": 3,
+    "source_count": 3,
+    "op_count": 3,
+    "owners": [
+      "authority",
+      "provider",
+      "requester"
+    ],
+    "sources": [
+      "context",
+      "evidence",
+      "snapshot"
+    ],
+    "ops": [
+      "eq",
+      "lt",
+      "lte"
+    ],
+    "distinct_fields": 3,
+    "attribute_paths": [
+      "context.risk_score",
+      "evidence.department",
+      "snapshot.data_tier"
+    ],
+    "clauses_by_owner": {
+      "requester": 1,
+      "provider": 1,
+      "authority": 1
+    },
+    "clauses_by_source": {
+      "evidence": 1,
+      "snapshot": 1,
+      "context": 1
+    },
+    "clauses_by_op": {
+      "eq": 1,
+      "lte": 1,
+      "lt": 1
+    },
+    "comparison_profile": {
+      "eq_hash": 1,
+      "int_compare": 2
+    },
+    "complexity_score": 9
+  },
+  "attribute_stats": {
+    "total_attributes": 3,
+    "requester_attributes": 1,
+    "provider_attributes": 1,
+    "authority_attributes": 1,
+    "attribute_paths": [
+      "context.risk_score",
+      "evidence.department",
+      "snapshot.data_tier"
+    ]
+  },
+  "result_stats": {
+    "decision": "DENY",
+    "passed_clause_count": 2,
+    "failed_clause_count": 1,
+    "pass_rate": 0.667,
+    "failed_clauses": [
+      "context.risk_score (lt)"
+    ]
+  },
+  "metrics_ms": {
+    "create_policy_ms": 4.045,
+    "admit_policy_ms": 0.602,
+    "publish_policy_ms": 0.687,
+    "derive_plan_ms": 0.56,
+    "create_session_ms": 0.687,
+    "bind_evidence_ms": 1.016,
+    "bind_snapshot_ms": 0.666,
+    "prepare_task_ms": 0.694,
+    "mpc_runtime_ms": 164.672,
+    "submit_receipt_ms": 1.239,
+    "seal_artifact_ms": 0.68,
+    "fetch_audit_ms": 0.752
+  },
+  "latency_groups_ms": {
+    "govauth_control_plane_ms": 8.957,
+    "mpc_runtime_ms": 164.672,
+    "artifact_and_audit_ms": 2.671,
+    "end_to_end_ms": 176.3
+  },
+  "mpc_inner_timings_ms": {
+    "mpc_start_ms": 4.626,
+    "clause_eval_ms": 10.237,
+    "decision_reduce_ms": 0.377,
+    "total_party_ms": 16.919
+  },
+  "notes": {
+    "govauth_sees_plaintext": false,
+    "private_inputs_sent_to_govauth": false,
+    "console_output_mode": "emoji_compact",
+    "govauth_visible_only": [
+      "policy",
+      "plan",
+      "session public context",
+      "evidence digest/ref",
+      "snapshot digest/ref",
+      "authority digest/ref",
+      "final decision",
+      "transcript digest",
+      "result digest",
+      "proof receipt"
+    ],
+    "govauth_not_visible": [
+      "evidence.department actual value",
+      "snapshot.data_tier actual value",
+      "context.risk_score actual value"
+    ]
+  }
+}
